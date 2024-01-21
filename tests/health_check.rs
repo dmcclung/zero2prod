@@ -39,3 +39,13 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
 
     assert_eq!(200, response.status().as_u16());
 }
+
+#[tokio::test]
+async fn subscribe_returns_a_400_when_email_is_missing() {
+    todo!()
+}
+
+#[tokio::test]
+async fn subscribe_returns_a_400_when_name_is_missing() {
+    todo!()
+}
