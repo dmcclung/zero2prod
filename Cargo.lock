@@ -1729,6 +1729,7 @@ dependencies = [
  "actix-web",
  "reqwest",
  "tokio",
+ "url",
 ]
 
 [[package]]
