@@ -6,7 +6,13 @@ async fn health_check() ->  HttpResponse {
     HttpResponse::Ok().finish()
 }
 
-async fn subscribe() -> HttpResponse {
+#[derive(serde::Deserialize)]
+struct SubscribeData {
+    email: String,
+    name: String
+}
+
+async fn subscribe(_form: web::Form<SubscribeData>) -> HttpResponse {
     HttpResponse::Ok().finish()
 }
 
