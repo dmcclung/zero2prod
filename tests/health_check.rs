@@ -49,26 +49,22 @@ async fn subscribe_returns_a_400_when_data_is_missing() {
     let client = reqwest::Client::new();
 
     struct TestCase<'a> {
-        name: &'a str,
-        email: &'a str,
+        body: &'a str,        
         error_message: &'a str
     }
 
     let test_cases = vec![
-        TestCase { name: "", email: "", error_message: "missing name and email" },
-        TestCase { name: "", email: "joemayo@zero2prod.com", error_message: "missing name" },
-        TestCase { name: "joe", email: "", error_message: "missing email" }
+        TestCase { body: "", error_message: "missing name and email" },
+        TestCase { body: "email=joemayo%40gmail.com", error_message: "missing name" },
+        TestCase { body: "name=joe", error_message: "missing email" }
     ];
 
     for test_case in test_cases {
-        let email_encoded: String = form_urlencoded::byte_serialize(test_case.email.as_bytes()).collect();
-        let name_encoded: String = form_urlencoded::byte_serialize(test_case.name.as_bytes()).collect();
-
-        let body = format!("name={}&email={}", name_encoded, email_encoded);
+        
         let response = client
             .post(&format!("{}/subscriptions", &app_address))
             .header("Content-Type", "application/x-www-form-urlencoded")
-            .body(body)
+            .body(test_case.body)
             .send()
             .await
             .expect("Failed to execute request.");
