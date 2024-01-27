@@ -1,6 +1,7 @@
 //! tests/healh_check.rs
 
 use std::net::TcpListener;
+use sqlx::{Connection, PgConnection};
 use url::form_urlencoded;
 
 #[tokio::test]
@@ -26,6 +27,11 @@ fn spawn_app() -> String {
 
 #[tokio::test]
 async fn subscribe_returns_a_200_for_valid_form_data() {
+    let config = zero2prod::config::Config::new();
+    let _connection = PgConnection::connect(&config.db_config.url)
+        .await
+        .expect("Failed to connect to Postgres.");
+    
     let app_address = spawn_app();
     let client = reqwest::Client::new();
 
