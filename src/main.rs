@@ -2,11 +2,8 @@ use std::net::TcpListener;
 use sqlx::postgres::PgPoolOptions;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // TODO: use config.rs to pull in the settings for all this
-    let settings = zero2prod::config::Settings{
-        port: 3000,
-    };
+async fn main() -> Result<(), Box<dyn std::error::Error>> {    
+    let settings = zero2prod::config::get_settings();
 
     let pool = PgPoolOptions::new().connect("postgres://admin:admin@localhost:5432/newsletter").await?;
     sqlx::migrate!().run(&pool).await?;
