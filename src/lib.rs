@@ -2,6 +2,8 @@ use std::net::TcpListener;
 
 use actix_web::{web, App, HttpServer, HttpResponse, dev::Server};
 
+pub mod config;
+
 async fn health_check() ->  HttpResponse {
     HttpResponse::Ok().finish()
 }
