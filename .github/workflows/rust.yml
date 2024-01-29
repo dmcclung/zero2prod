@@ -37,7 +37,7 @@ jobs:
 
     - name: Start services with Docker Compose
       run: | 
-        docker-compose -f docker-compose.yml up -d
+        docker-compose up -d
         sleep 10
 
     - name: Build
