@@ -1,7 +1,7 @@
 //! tests/healh_check.rs
 
 use std::net::TcpListener;
-use sqlx::{Connection, PgConnection};
+use sqlx::{Connection, PgConnection };
 use url::form_urlencoded;
 
 #[tokio::test]
@@ -28,7 +28,7 @@ fn spawn_app() -> String {
 #[tokio::test]
 async fn subscribe_returns_a_200_for_valid_form_data() {
     let config = zero2prod::config::Config::new();
-    let _connection = PgConnection::connect(&config.db_config.url)
+    let mut connection = PgConnection::connect(&config.db_config.url)
         .await
         .expect("Failed to connect to Postgres.");
     
@@ -36,8 +36,9 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
     let client = reqwest::Client::new();
 
     let email: String = form_urlencoded::byte_serialize("joemayo@zero2prod.com".as_bytes()).collect();
+    let name = "joe";
 
-    let body = format!("name=joe&email={}", email);    
+    let body = format!("name={}&email={}", name, email);
     let response = client
         .post(&format!("{}/subscriptions", &app_address))
         .header("Content-Type", "application/x-www-form-urlencoded")
@@ -47,6 +48,13 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
         .expect("Failed to execute request.");
 
     assert_eq!(200, response.status().as_u16());
+
+    let saved = sqlx::query!("SELECT email, name FROM subscriptions")
+        .fetch_one(&mut connection)
+        .await
+        .expect("Failed to fetch saved subscription");
+    assert_eq!(saved.email, email);
+    assert_eq!(saved.name, name);
 }
 
 #[tokio::test]

@@ -39,6 +39,10 @@ jobs:
       run: | 
         docker-compose up -d
         sleep 10
+    
+    - name: Setup .env
+      run: |
+        echo "DATABASE_URL=postgres://admin:admin@localhost:5432/newsletter" > .env
 
     - name: Build
       run: cargo build --verbose
