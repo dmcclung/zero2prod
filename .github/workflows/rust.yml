@@ -44,6 +44,11 @@ jobs:
       run: |
         echo "DATABASE_URL=postgres://admin:admin@localhost:5432/newsletter" > .env
 
+    - name: Run migrations
+      run: |
+        cargo install sqlx-cli
+        sqlx migrate run
+
     - name: Build
       run: cargo build --verbose
 
