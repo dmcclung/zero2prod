@@ -49,6 +49,11 @@ jobs:
         cargo install sqlx-cli
         sqlx migrate run
 
+    - name: Check and Lint
+      run: |
+        cargo check
+        cargo lint
+
     - name: Build
       run: cargo build --verbose
 
