@@ -18,11 +18,17 @@ reqwest = "^0.11"
 
 [dependencies]
 actix-web = "4"
-chrono = "0.4.33"
 dotenv = "0.15.0"
 serde = { version = "1.0.195", features = ["derive"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 url = "2.5.0"
+
+[dependencies.chrono]
+version = "0.4.33"
+default-features = false
+features = [
+    "clock"
+]
 
 [dependencies.uuid]
 version = "1.7.0"
