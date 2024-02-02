@@ -1,6 +1,6 @@
 use std::net::TcpListener;
 
-use actix_web::{web, App, HttpServer, HttpResponse, dev::Server};
+use actix_web::{dev::Server, middleware::Logger, web, App, HttpResponse, HttpServer};
 use sqlx::{Pool, Postgres};
 use uuid::Uuid;
 use chrono::Utc;
@@ -45,7 +45,8 @@ pub fn run(listener: TcpListener, pool: Pool<Postgres>) -> Result<Server, Box<dy
     let server = HttpServer::new(move || {
         let pool = pool.clone();
 
-        App::new()            
+        App::new()     
+            .wrap(Logger::default())       
             .route("/health_check", web::get().to(health_check))
             .route("/subscriptions", web::post().to(subscribe))
             .app_data(pool)
