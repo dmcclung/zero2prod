@@ -2711,10 +2711,12 @@ dependencies = [
  "chrono",
  "dotenv",
  "env_logger",
+ "log",
  "reqwest",
  "serde",
  "sqlx",
  "tokio",
+ "tracing",
  "url",
  "uuid",
 ]
