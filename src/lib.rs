@@ -18,6 +18,19 @@ struct SubscribeData {
 }
 
 async fn subscribe(form: web::Form<SubscribeData>, pool: web::Data<Pool<Postgres>>) -> HttpResponse {
+    let request_id = Uuid::new_v4();
+    tracing::info!(
+        "request_id {} - Adding '{}' '{}' as a new subscriber",
+        request_id,
+        form.email,
+        form.name
+    );
+
+    tracing::info!(
+        "request_id {} - Saving new subscriber details",
+        request_id
+    );
+
     let result = sqlx::query!(
         r#"
         INSERT INTO subscriptions (id, email, name, subscribed_at)
@@ -32,9 +45,19 @@ async fn subscribe(form: web::Form<SubscribeData>, pool: web::Data<Pool<Postgres
     .await;
 
     match result {
-        Ok(_) => HttpResponse::Ok().finish(),
+        Ok(_) => {
+            tracing::info!(
+                "request_id {} - New subscriber details has been saved",
+                request_id
+            );
+            HttpResponse::Ok().finish()
+        }
         Err(e) => {
-            println!("Failed to execute query: {}", e);
+            tracing::info!(
+                "request_id {} - Failed to execute query: {:?}",
+                request_id,
+                e
+            );
             HttpResponse::InternalServerError().finish()
         }
     }    
