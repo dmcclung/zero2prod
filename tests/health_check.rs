@@ -1,12 +1,12 @@
 //! tests/healh_check.rs
 
 use std::net::TcpListener;
-use sqlx::{Connection, PgConnection };
+use sqlx::{postgres::PgPoolOptions, Connection, PgConnection };
 use url::form_urlencoded;
 
 #[tokio::test]
 async fn health_check_ok() {
-    let app_address = spawn_app();
+    let app_address = spawn_app().await.unwrap();
 
     let client = reqwest::Client::new();
 
@@ -17,12 +17,18 @@ async fn health_check_ok() {
     assert_eq!(Some(0), response.content_length());
 }
 
-fn spawn_app() -> String {
+async fn spawn_app() -> Result<String, sqlx::Error> {
+    let config = zero2prod::config::Config::new();
+    let pool = PgPoolOptions::new().connect(&config.db_config.url).await?;
+    sqlx::migrate!().run(&pool).await?;
+    sqlx::query!("DELETE FROM subscriptions").execute(&pool).await?;
+        
+    
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
     let port = listener.local_addr().unwrap().port();
-    let server = zero2prod::run(listener).expect("Failed to bind address");
+    let server = zero2prod::run(listener, pool).expect("Failed to bind address");
     let _ = tokio::spawn(server);
-    format!("http://127.0.0.1:{}", port)
+    Ok(format!("http://127.0.0.1:{}", port))
 }
 
 #[tokio::test]
@@ -32,13 +38,18 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
         .await
         .expect("Failed to connect to Postgres.");
     
-    let app_address = spawn_app();
+    let app_address = spawn_app().await.unwrap();
+        
     let client = reqwest::Client::new();
 
-    let email: String = form_urlencoded::byte_serialize("joemayo@zero2prod.com".as_bytes()).collect();
+    let email = "joemayo@zero2prod.com";
     let name = "joe";
 
-    let body = format!("name={}&email={}", name, email);
+    let body = format!(
+        "name={}&email={}", 
+        form_urlencoded::byte_serialize(name.as_bytes()).collect::<String>(), 
+        form_urlencoded::byte_serialize(email.as_bytes()).collect::<String>()
+    );
     let response = client
         .post(&format!("{}/subscriptions", &app_address))
         .header("Content-Type", "application/x-www-form-urlencoded")
@@ -59,7 +70,7 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
 
 #[tokio::test]
 async fn subscribe_returns_a_400_when_data_is_missing() {
-    let app_address = spawn_app();
+    let app_address = spawn_app().await.unwrap();
     let client = reqwest::Client::new();
 
     struct TestCase<'a> {

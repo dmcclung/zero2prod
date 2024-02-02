@@ -11,5 +11,5 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = format!("[::]:{}", config.port);
 
     let listener = TcpListener::bind(addr)?;
-    Ok(zero2prod::run(listener)?.await?)
+    Ok(zero2prod::run(listener, pool)?.await?)
 }
