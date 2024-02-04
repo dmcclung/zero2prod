@@ -35,12 +35,15 @@ impl Config {
             url
         };
         
-        return Config {
+        Config {
             port: 3000,
             db_config
         }
     }
 }
 
-
-
+impl Default for Config {
+    fn default() -> Self {
+        Self::new()
+    }
+}
