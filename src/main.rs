@@ -3,9 +3,12 @@ use tracing::subscriber::set_global_default;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 use sqlx::postgres::PgPoolOptions;
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
+use tracing_log::LogTracer;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {    
+async fn main() -> Result<(), Box<dyn std::error::Error>> {  
+    LogTracer::init().expect("Failed to set logger");
+
     let env_filter = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| EnvFilter::new("info"));
 
