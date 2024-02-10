@@ -81,3 +81,16 @@ jobs:
         file: ./Dockerfile
         push: ${{ github.event_name != 'pull_request' }}
         tags: zero2prod-server:latest
+    
+    - name: Restart Docker Compose on Remote Server
+      if: github.event_name != 'pull_request'
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.REMOTE_HOST }}  # Add your server's IP address or hostname to your repository's secrets
+        username: ${{ secrets.REMOTE_USER }}  # Add your server's SSH username to your repository's secrets
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          cd /path/to/your/docker-compose/project  # Change to your Docker Compose directory
+          docker-compose pull  # Pull the latest images
+          docker-compose down  # Stop and remove the containers
+          docker-compose up -d  # Recreate and start the containers
