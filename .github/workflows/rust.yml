@@ -42,7 +42,7 @@ jobs:
     
     - name: Setup .env
       run: |
-        echo "${{secrets.DATABASE_URL }}" > .env
+        echo "DATABASE_URL=${{secrets.DATABASE_URL }}" > .env
 
     - name: Run migrations
       run: |
