@@ -57,7 +57,7 @@ jobs:
       run: cargo build --verbose
 
     - name: Run tests
-      run: cargo test --verbose
+      run: DATABASE_URL=${{ secrets.DATABASE_URL }} cargo test --verbose
 
     - name: Setup .env
       run: |
@@ -90,7 +90,7 @@ jobs:
         username: ${{ secrets.REMOTE_USER }}  # Add your server's SSH username to your repository's secrets
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
-          cd /path/to/your/docker-compose/project  # Change to your Docker Compose directory
-          docker-compose pull  # Pull the latest images
-          docker-compose down  # Stop and remove the containers
-          docker-compose up -d  # Recreate and start the containers
+          cd ${{ secrets.REMOTE_PATH }}
+          docker compose -f docker-compose.yml -f docker-compose.production.yml pull
+          docker compose -f docker-compose.yml -f docker-compose.production.yml down
+          docker compose -f docker-compose.yml -f docker-compose.production.yml up -d
