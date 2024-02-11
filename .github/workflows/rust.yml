@@ -43,7 +43,7 @@ jobs:
     - name: Run migrations
       run: |
         cargo install sqlx-cli
-        sqlx migrate run
+        sqlx migrate run --database-url ${{ secrets.DATABASE_URL }}
 
     - name: Check and Lint
       run: |
@@ -61,7 +61,7 @@ jobs:
 
     - name: Setup .env
       run: |
-        echo "${{secrets.ENV_FILE }}" > .env
+        echo "${{ secrets.ENV_FILE }}" > .env
 
     - name: Set up Docker Buildx      
       uses: docker/setup-buildx-action@v3
