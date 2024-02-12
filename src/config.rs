@@ -9,7 +9,7 @@ pub struct DatabaseConfig {
 
 pub struct Config {
     pub port: u16,
-    pub db_config: DatabaseConfig
+    pub db_config: DatabaseConfig,
 }
 
 impl Config {
@@ -24,20 +24,14 @@ impl Config {
 
         let url = format!(
             "postgres://{}:{}@{}:{}/{}",
-            psql_user, 
-            psql_password,
-            psql_host,
-            psql_port,
-            psql_database
+            psql_user, psql_password, psql_host, psql_port, psql_database
         );
 
-        let db_config = DatabaseConfig {
-            url
-        };
-        
+        let db_config = DatabaseConfig { url };
+
         Config {
             port: 3000,
-            db_config
+            db_config,
         }
     }
 }
