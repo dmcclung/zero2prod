@@ -2,7 +2,7 @@ use std::net::TcpListener;
 
 use actix_web::{dev::Server, middleware::Logger, web, App, HttpResponse, HttpServer};
 use chrono::Utc;
-use domain::SubscriberName;
+use domain::NewSubscriber;
 use sqlx::{Pool, Postgres};
 use tracing::{error, info, instrument, Instrument};
 use uuid::Uuid;
@@ -14,27 +14,19 @@ async fn health_check() -> HttpResponse {
     HttpResponse::Ok().finish()
 }
 
-#[derive(serde::Deserialize, Debug)]
-struct SubscribeData {
-    email: String,
-    name: SubscriberName,
-}
-
 #[instrument(
-    skip(form, pool),
+    skip(new_subscriber, pool),
     fields(
         request_id = %Uuid::new_v4(),
-        subscriber_email = %form.email,
-        subscriber_name = %form.name
+        subscriber_email = %new_subscriber.email,
+        subscriber_name = %new_subscriber.name
     )
 )]
 async fn subscribe(
-    form: web::Form<SubscribeData>,
+    new_subscriber: web::Form<NewSubscriber>,
     pool: web::Data<Pool<Postgres>>,
 ) -> HttpResponse {
     info!("Adding a new subscriber");
-
-    info!("Saving new subscriber details in the database");
 
     let result = sqlx::query!(
         r#"
@@ -42,8 +34,8 @@ async fn subscribe(
         VALUES ($1, $2, $3, $4)
         "#,
         Uuid::new_v4(),
-        form.email,
-        form.name.as_ref(),
+        new_subscriber.email,
+        new_subscriber.name.as_ref(),
         Utc::now()
     )
     .execute(pool.get_ref())

@@ -1,6 +1,12 @@
 //! src/domain.rs
 
 #[derive(serde::Deserialize, Debug)]
+pub struct NewSubscriber {
+    pub email: String,
+    pub name: SubscriberName,
+}
+
+#[derive(serde::Deserialize, Debug)]
 pub struct SubscriberName(String);
 
 impl SubscriberName {
