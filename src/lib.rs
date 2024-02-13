@@ -2,11 +2,13 @@ use std::net::TcpListener;
 
 use actix_web::{dev::Server, middleware::Logger, web, App, HttpResponse, HttpServer};
 use chrono::Utc;
+use domain::SubscriberName;
 use sqlx::{Pool, Postgres};
 use tracing::{error, info, instrument, Instrument};
 use uuid::Uuid;
 
 pub mod config;
+pub mod domain;
 
 async fn health_check() -> HttpResponse {
     HttpResponse::Ok().finish()
@@ -15,7 +17,7 @@ async fn health_check() -> HttpResponse {
 #[derive(serde::Deserialize, Debug)]
 struct SubscribeData {
     email: String,
-    name: String,
+    name: SubscriberName,
 }
 
 #[instrument(
@@ -41,7 +43,7 @@ async fn subscribe(
         "#,
         Uuid::new_v4(),
         form.email,
-        form.name,
+        form.name.as_ref(),
         Utc::now()
     )
     .execute(pool.get_ref())
