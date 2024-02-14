@@ -1,18 +1,10 @@
-//! src/domain.rs
-
-#[derive(serde::Deserialize, Debug)]
-pub struct NewSubscriber {
-    pub email: String,
-    pub name: SubscriberName,
-}
-
 #[derive(serde::Deserialize, Debug)]
 pub struct SubscriberName(String);
 
 impl SubscriberName {
     pub fn parse(s: String) -> SubscriberName {
-
-        return SubscriberName(s);
+        // TODO: validation goes here
+        SubscriberName(s)
     }
 }
 
@@ -25,6 +17,6 @@ impl std::fmt::Display for SubscriberName {
 impl AsRef<String> for SubscriberName {
     fn as_ref(&self) -> &String {
         let SubscriberName(inner) = self;
-        return inner;
+        inner
     }
 }

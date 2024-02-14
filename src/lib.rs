@@ -2,7 +2,7 @@ use std::net::TcpListener;
 
 use actix_web::{dev::Server, middleware::Logger, web, App, HttpResponse, HttpServer};
 use chrono::Utc;
-use domain::NewSubscriber;
+use domain::subscriber::NewSubscriber;
 use sqlx::{Pool, Postgres};
 use tracing::{error, info, instrument, Instrument};
 use uuid::Uuid;
@@ -34,7 +34,7 @@ async fn subscribe(
         VALUES ($1, $2, $3, $4)
         "#,
         Uuid::new_v4(),
-        new_subscriber.email,
+        new_subscriber.email.as_ref(),
         new_subscriber.name.as_ref(),
         Utc::now()
     )
