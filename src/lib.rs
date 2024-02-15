@@ -2,7 +2,8 @@ use std::net::TcpListener;
 
 use actix_web::{dev::Server, middleware::Logger, web, App, HttpResponse, HttpServer};
 use chrono::Utc;
-use domain::subscriber::NewSubscriber;
+use domain::subscriber::{ NewSubscriber, SubscriberEmail, SubscriberName };
+use serde::Deserialize;
 use sqlx::{Pool, Postgres};
 use tracing::{error, info, instrument, Instrument};
 use uuid::Uuid;
@@ -14,19 +15,40 @@ async fn health_check() -> HttpResponse {
     HttpResponse::Ok().finish()
 }
 
+#[derive(Deserialize)]
+struct SubscriberFormData {
+    pub email: String,
+    pub name: String,
+}
+
 #[instrument(
-    skip(new_subscriber, pool),
+    skip(data, pool),
     fields(
         request_id = %Uuid::new_v4(),
-        subscriber_email = %new_subscriber.email,
-        subscriber_name = %new_subscriber.name
+        subscriber_email = %data.email,
+        subscriber_name = %data.name
     )
 )]
 async fn subscribe(
-    new_subscriber: web::Form<NewSubscriber>,
+    data: web::Form<SubscriberFormData>,
     pool: web::Data<Pool<Postgres>>,
 ) -> HttpResponse {
     info!("Adding a new subscriber");
+
+    let email = match SubscriberEmail::parse(data.0.email) {
+        Ok(email) => email,
+        Err(_) => return HttpResponse::BadRequest().finish()
+    };
+
+    let name = match SubscriberName::parse(data.0.name) {
+        Ok(name) => name,
+        Err(_) => return HttpResponse::BadRequest().finish()
+    };
+
+    let new_subscriber = NewSubscriber {
+        email,
+        name
+    };
 
     let result = sqlx::query!(
         r#"
