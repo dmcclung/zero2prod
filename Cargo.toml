@@ -23,6 +23,7 @@ reqwest = "^0.11"
 actix-web = "4"
 dotenv = "0.15.0"
 log = "0.4.20"
+regex = "1.10.3"
 serde = { version = "1.0.195", features = ["derive"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 tracing = "0.1.40"
