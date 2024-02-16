@@ -46,6 +46,9 @@ mod tests {
     use crate::domain::subscriber::SubscriberName;
     use claims::{assert_err, assert_ok};
 
+    use fake::faker::name::en::FirstName;
+    use fake::Fake;
+
     #[test]
     fn test_empty_name() {
         assert_err!(SubscriberName::parse("".into()));
@@ -57,7 +60,7 @@ mod tests {
     }
 
     #[test]
-    fn test_good_name() {
-        assert_ok!(SubscriberName::parse("zero2prod".into()));
+    fn test_valid_name() {
+        assert_ok!(SubscriberName::parse(FirstName().fake()));
     }
 }

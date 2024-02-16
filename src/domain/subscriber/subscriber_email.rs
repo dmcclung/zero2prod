@@ -52,6 +52,9 @@ mod tests {
     use crate::domain::subscriber::SubscriberEmail;
     use claims::{assert_err, assert_ok};
 
+    use fake::faker::internet::en::SafeEmail;
+    use fake::Fake;
+
     #[test]
     fn test_whitespace_email() {
         assert_err!(SubscriberEmail::parse(" ".into()));
@@ -63,7 +66,7 @@ mod tests {
     }
 
     #[test]
-    fn test_good_email() {
-        assert_ok!(SubscriberEmail::parse("dev@zero2prod.xyz".into()));
+    fn test_valid_email() {
+        assert_ok!(SubscriberEmail::parse(SafeEmail().fake()));
     }
 }
