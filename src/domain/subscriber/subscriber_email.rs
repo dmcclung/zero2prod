@@ -7,18 +7,18 @@ pub struct SubscriberEmail(String);
 
 #[derive(Debug)]
 pub enum SubscriberError {
-    ParseError(String)
+    ParseError(String),
 }
 
 impl std::fmt::Display for SubscriberError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            SubscriberError::ParseError(e) => write!(f, "Parse Error: {}", e),            
+            SubscriberError::ParseError(e) => write!(f, "Parse Error: {}", e),
         }
     }
 }
 
-impl std::error::Error for SubscriberError{}
+impl std::error::Error for SubscriberError {}
 
 impl SubscriberEmail {
     pub fn parse(s: String) -> Result<SubscriberEmail, SubscriberError> {
@@ -50,20 +50,20 @@ impl AsRef<String> for SubscriberEmail {
 #[cfg(test)]
 mod tests {
     use crate::domain::subscriber::SubscriberEmail;
-    use claims::{ assert_ok, assert_err };
+    use claims::{assert_err, assert_ok};
 
     #[test]
-    fn test_whitespace_email () {
+    fn test_whitespace_email() {
         assert_err!(SubscriberEmail::parse(" ".into()));
     }
 
     #[test]
-    fn test_missing_local_part () {
+    fn test_missing_local_part() {
         assert_err!(SubscriberEmail::parse("@missinglocalpart.com".into()));
     }
 
     #[test]
-    fn test_good_email () {
+    fn test_good_email() {
         assert_ok!(SubscriberEmail::parse("dev@zero2prod.xyz".into()));
     }
 }
