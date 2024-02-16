@@ -46,3 +46,24 @@ impl AsRef<String> for SubscriberEmail {
         inner
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::domain::subscriber::SubscriberEmail;
+    use claims::{ assert_ok, assert_err };
+
+    #[test]
+    fn test_whitespace_email () {
+        assert_err!(SubscriberEmail::parse(" ".into()));
+    }
+
+    #[test]
+    fn test_missing_local_part () {
+        assert_err!(SubscriberEmail::parse("@missinglocalpart.com".into()));
+    }
+
+    #[test]
+    fn test_good_email () {
+        assert_ok!(SubscriberEmail::parse("dev@zero2prod.xyz".into()));
+    }
+}
