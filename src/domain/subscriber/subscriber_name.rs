@@ -16,7 +16,14 @@ impl std::fmt::Display for SubscriberError {
 
 impl SubscriberName {
     pub fn parse(s: String) -> Result<SubscriberName, SubscriberError> {
-        // TODO: validation goes here
+        if s.trim().is_empty() {
+            return Err(SubscriberError::ParseError("Empty name".into()))
+        }
+
+        if s.len() > 50 {
+            return Err(SubscriberError::ParseError("Length greater than 50".into()))
+        }
+
         Ok(SubscriberName(s))
     }
 }
@@ -32,4 +39,26 @@ impl AsRef<String> for SubscriberName {
         let SubscriberName(inner) = self;
         inner
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::domain::subscriber::SubscriberName;
+    use claims::{ assert_ok, assert_err };
+
+    #[test]
+    fn test_empty_name () {
+        assert_err!(SubscriberName::parse("".into()));        
+    }
+
+    #[test]
+    fn test_long_name () {
+        assert_err!(SubscriberName::parse("a".repeat(51)));        
+    }
+
+    #[test]
+    fn test_good_name () {
+        assert_ok!(SubscriberName::parse("zero2prod".into()));
+    }
+
 }
