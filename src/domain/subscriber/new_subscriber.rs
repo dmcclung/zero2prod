@@ -1,7 +1,7 @@
 //! new_subscriber.rs
 
-use crate::domain::subscriber::SubscriberName;
 use crate::domain::subscriber::SubscriberEmail;
+use crate::domain::subscriber::SubscriberName;
 
 #[derive(serde::Deserialize, Debug)]
 pub struct NewSubscriber {
