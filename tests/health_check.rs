@@ -97,8 +97,8 @@ async fn subscribe_returns_a_400_when_data_is_missing() {
         },
         TestCase {
             body: "name=user&email=no-at-sign.com",
-            error_message: "malformed email"
-        }
+            error_message: "malformed email",
+        },
     ];
 
     for test_case in test_cases {
