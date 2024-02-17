@@ -50,7 +50,7 @@ impl AsRef<String> for SubscriberEmail {
 #[cfg(test)]
 mod tests {
     use crate::domain::subscriber::SubscriberEmail;
-    use claims::{assert_err, assert_ok};
+    use claims::assert_err;
 
     use fake::faker::internet::en::SafeEmail;
     use fake::Fake;
@@ -65,8 +65,18 @@ mod tests {
         assert_err!(SubscriberEmail::parse("@missinglocalpart.com".into()));
     }
 
-    #[test]
-    fn test_valid_email() {
-        assert_ok!(SubscriberEmail::parse(SafeEmail().fake()));
+    #[derive(Debug, Clone)]
+    struct ValidEmailFixture(pub String);
+
+    impl quickcheck::Arbitrary for ValidEmailFixture {
+        fn arbitrary(_: &mut quickcheck::Gen) -> Self {
+            let email = SafeEmail().fake();
+            Self(email)
+        }
+    }
+
+    #[quickcheck_macros::quickcheck]
+    fn test_valid_email(valid_email: ValidEmailFixture) -> bool {
+        SubscriberEmail::parse(valid_email.0).is_ok()
     }
 }
