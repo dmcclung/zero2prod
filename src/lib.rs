@@ -2,7 +2,7 @@ use std::net::TcpListener;
 
 use actix_web::{dev::Server, middleware::Logger, web, App, HttpResponse, HttpServer};
 use chrono::Utc;
-use domain::subscriber::{NewSubscriber, SubscriberEmail, SubscriberName};
+use domain::subscriber::{NewSubscriber, SubscriberEmail, SubscriberError, SubscriberName};
 use serde::Deserialize;
 use sqlx::{Pool, Postgres};
 use tracing::{error, info, instrument, Instrument};
@@ -21,6 +21,14 @@ struct SubscriberFormData {
     pub name: String,
 }
 
+fn parse_subscriber(data: SubscriberFormData) -> Result<NewSubscriber, SubscriberError> {
+    let email = SubscriberEmail::parse(data.email)?;
+    let name = SubscriberName::parse(data.name)?;
+
+    let new_subscriber = NewSubscriber { email, name };
+    Ok(new_subscriber)
+}
+
 #[instrument(
     skip(data, pool),
     fields(
@@ -35,17 +43,10 @@ async fn subscribe(
 ) -> HttpResponse {
     info!("Adding a new subscriber");
 
-    let email = match SubscriberEmail::parse(data.0.email) {
-        Ok(email) => email,
+    let new_subscriber = match parse_subscriber(data.0) {
+        Ok(new_subscriber) => new_subscriber,
         Err(_) => return HttpResponse::BadRequest().finish(),
     };
-
-    let name = match SubscriberName::parse(data.0.name) {
-        Ok(name) => name,
-        Err(_) => return HttpResponse::BadRequest().finish(),
-    };
-
-    let new_subscriber = NewSubscriber { email, name };
 
     let result = sqlx::query!(
         r#"
