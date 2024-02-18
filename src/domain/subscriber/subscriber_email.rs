@@ -1,24 +1,10 @@
-//! src/subscriber_email.rs
+//! src/domain/subscriber/subscriber_email.rs
 
 use regex::Regex;
+use crate::domain::subscriber::SubscriberError;
 
 #[derive(serde::Deserialize, Debug)]
 pub struct SubscriberEmail(String);
-
-#[derive(Debug)]
-pub enum SubscriberError {
-    ParseError(String),
-}
-
-impl std::fmt::Display for SubscriberError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            SubscriberError::ParseError(e) => write!(f, "Parse Error: {}", e),
-        }
-    }
-}
-
-impl std::error::Error for SubscriberError {}
 
 impl SubscriberEmail {
     pub fn parse(s: String) -> Result<SubscriberEmail, SubscriberError> {
