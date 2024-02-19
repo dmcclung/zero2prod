@@ -1,7 +1,7 @@
 //! src/domain/subscriber/subscriber_email.rs
 
-use regex::Regex;
 use crate::domain::subscriber::SubscriberError;
+use regex::Regex;
 
 #[derive(serde::Deserialize, Debug)]
 pub struct SubscriberEmail(String);
