@@ -10,6 +10,7 @@ use uuid::Uuid;
 
 pub mod config;
 pub mod domain;
+pub mod email;
 
 async fn health_check() -> HttpResponse {
     HttpResponse::Ok().finish()
