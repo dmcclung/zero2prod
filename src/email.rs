@@ -11,6 +11,8 @@ use anyhow::Result;
 
 use tracing::info;
 
+const DEFAULT_SENDER: &str = "admin@zero2prod.xyz";
+
 pub struct SmtpConfig {
     host: String,
     port: u16,
@@ -94,7 +96,7 @@ impl EmailService {
 
     pub fn send_email(&self, email: Email) -> Result<()> {
         let to: Mailbox = email.to.parse()?;
-        let from: Mailbox = email.from.parse()?;
+        let from: Mailbox = if email.from.is_empty() { DEFAULT_SENDER.parse()? } else { email.from.parse()? };
         
         let mut message_builder = Message::builder()
             .from(from)
