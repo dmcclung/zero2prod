@@ -24,10 +24,10 @@ impl SmtpConfig {
     pub fn parse_from_env() -> SmtpConfig {
         dotenv::dotenv().ok();
 
-        let host = env::var("EMAIL_HOST").unwrap();
-        let port = env::var("EMAIL_PORT").unwrap();
-        let user = env::var("EMAIL_USER").unwrap();
-        let password = env::var("EMAIL_PASSWORD").unwrap();
+        let host = env::var("EMAIL_HOST").unwrap_or("localhost".into());
+        let port = env::var("EMAIL_PORT").unwrap_or("528".into());
+        let user = env::var("EMAIL_USER").unwrap_or("user".into());
+        let password = env::var("EMAIL_PASSWORD").unwrap_or("password".into());
 
         SmtpConfig {
             host,
