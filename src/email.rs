@@ -3,9 +3,9 @@
 use std::env;
 
 use lettre::message::header::ContentType;
+use lettre::message::Mailbox;
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{Message, SmtpTransport, Transport};
-use lettre::message::Mailbox;
 
 use anyhow::Result;
 
@@ -21,23 +21,20 @@ pub struct SmtpConfig {
 }
 
 impl SmtpConfig {
-    pub fn parse_from_env() -> Result<SmtpConfig> {
+    pub fn parse_from_env() -> SmtpConfig {
         dotenv::dotenv().ok();
 
-        let host = env::var("EMAIL_HOST")?;
-        
-        let port = env::var("EMAIL_PORT")?;
-        let user = env::var("EMAIL_USER")?;
-        let password = env::var("EMAIL_PASSWORD")?;
+        let host = env::var("EMAIL_HOST").unwrap();
+        let port = env::var("EMAIL_PORT").unwrap();
+        let user = env::var("EMAIL_USER").unwrap();
+        let password = env::var("EMAIL_PASSWORD").unwrap();
 
-        let smtp_config = SmtpConfig {
+        SmtpConfig {
             host,
-            port: port.parse::<u16>()?,
+            port: port.parse::<u16>().unwrap(),
             user,
-            password
-        };
-
-        Ok(smtp_config)
+            password,
+        }
     }
 }
 
@@ -54,7 +51,7 @@ impl SmtpConfig {
 ///
 /// ```
 /// use zero2prod::email::Email;
-/// 
+///
 /// let email = Email {
 ///     to: "recipient@example.com".to_string(),
 ///     from: "sender@example.com".to_string(),
@@ -84,44 +81,51 @@ pub struct Email {
 }
 
 pub struct EmailService {
-    config: SmtpConfig
+    config: SmtpConfig,
 }
 
 impl EmailService {
     pub fn new(config: SmtpConfig) -> EmailService {
-        EmailService {
-            config
-        }
+        EmailService { config }
     }
 
     pub fn send_email(&self, email: Email) -> Result<()> {
         let to: Mailbox = email.to.parse()?;
-        let from: Mailbox = if email.from.is_empty() { DEFAULT_SENDER.parse()? } else { email.from.parse()? };
-        
-        let mut message_builder = Message::builder()
-            .from(from)
-            .to(to)
-            .subject(email.subject);            
+        let from: Mailbox = if email.from.is_empty() {
+            DEFAULT_SENDER.parse()?
+        } else {
+            email.from.parse()?
+        };
+
+        let mut message_builder = Message::builder().from(from).to(to).subject(email.subject);
 
         if !email.reply_to.is_empty() {
-            let reply_to: Mailbox = email.reply_to.parse()?;                
+            let reply_to: Mailbox = email.reply_to.parse()?;
 
             message_builder = message_builder.reply_to(reply_to);
         }
 
         let message = message_builder
-            .header(if !email.html.is_empty() { ContentType::TEXT_HTML } else { ContentType::TEXT_PLAIN })
-            .body(if !email.html.is_empty() { email.html } else { email.plaintext })?;
-            
-        
+            .header(if !email.html.is_empty() {
+                ContentType::TEXT_HTML
+            } else {
+                ContentType::TEXT_PLAIN
+            })
+            .body(if !email.html.is_empty() {
+                email.html
+            } else {
+                email.plaintext
+            })?;
+
         let creds = Credentials::new(self.config.user.clone(), self.config.password.clone());
-                
+
         let mailer = SmtpTransport::relay(&self.config.host)?
             .port(self.config.port)
             .credentials(creds)
             .build();
 
-        mailer.send(&message)
+        mailer
+            .send(&message)
             .map(|_| info!("Email sent successfully"))
             .map_err(|e| e.into())
     }

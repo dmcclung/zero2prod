@@ -1,6 +1,9 @@
 //! src/config.rs
 
 use std::env;
+
+use crate::email::SmtpConfig;
+
 #[derive(serde::Deserialize)]
 
 pub struct DatabaseConfig {
@@ -10,6 +13,7 @@ pub struct DatabaseConfig {
 pub struct Config {
     pub port: u16,
     pub db_config: DatabaseConfig,
+    pub smtp_config: SmtpConfig,
 }
 
 impl Config {
@@ -29,9 +33,12 @@ impl Config {
 
         let db_config = DatabaseConfig { url };
 
+        let smtp_config = SmtpConfig::parse_from_env();
+
         Config {
             port: 3000,
             db_config,
+            smtp_config,
         }
     }
 }
