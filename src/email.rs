@@ -130,3 +130,43 @@ impl EmailService {
             .map_err(|e| e.into())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::env::{remove_var, set_var};
+    use fake::faker::internet::en::{Username, DomainSuffix, Password};
+    use fake::faker::number::en::NumberWithFormat;
+    use fake::Fake;
+
+    use super::SmtpConfig;
+
+    #[test]
+    fn smtp_config_from_env() {
+        let hostname = generate_hostname();
+        let username: String = Username().fake();
+        let port: String = NumberWithFormat("###").fake();
+        let password: String = Password(8..16).fake();
+
+        set_var("EMAIL_HOST", hostname.clone());
+        set_var("EMAIL_USER", username.clone());
+        set_var("EMAIL_PORT", port.clone());
+        set_var("EMAIL_PASSWORD", password.clone());
+
+        let smtp_config = SmtpConfig::parse_from_env();
+        assert_eq!(hostname, smtp_config.host);
+        assert_eq!(username, smtp_config.user);
+        assert_eq!(port.parse::<u16>().unwrap(), smtp_config.port);
+        assert_eq!(password, smtp_config.password);
+        
+        remove_var("EMAIL_HOST");
+        remove_var("EMAIL_USER");
+        remove_var("EMAIL_PORT");
+        remove_var("EMAIL_PASSWORD");
+    }
+
+    fn generate_hostname() -> String {
+        let domain: String = Username().fake();
+        let domain_suffix: String = DomainSuffix().fake();
+        format!("smtp.{}.{}", domain, domain_suffix)
+    }
+}
