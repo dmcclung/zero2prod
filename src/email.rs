@@ -80,13 +80,37 @@ pub struct Email {
     pub plaintext: String,
 }
 
-pub struct EmailService {
-    config: SmtpConfig,
+pub trait EmailSender {
+    fn send(&self, port: u16, host: &str, creds: Credentials, message: Message) -> Result<()>;
 }
 
-impl EmailService {
-    pub fn new(config: SmtpConfig) -> EmailService {
-        EmailService { config }
+struct LettreEmailSender;
+
+impl EmailSender for LettreEmailSender {
+    fn send(&self, port: u16, host: &str, creds: Credentials, message: Message) -> Result<()> {
+        let mailer = SmtpTransport::relay(host)?
+            .port(port)
+            .credentials(creds)
+            .build();
+
+        mailer
+            .send(&message)
+            .map(|_| info!("Email sent successfully"))
+            .map_err(|e| e.into())
+    }
+}
+
+pub struct EmailService<T: EmailSender> {
+    config: SmtpConfig,
+    email_sender: T,
+}
+
+impl<T: EmailSender> EmailService<T> {
+    pub fn new(config: SmtpConfig, email_sender: T) -> Self {
+        Self {
+            config,
+            email_sender,
+        }
     }
 
     pub fn send_email(&self, email: Email) -> Result<()> {
@@ -118,25 +142,17 @@ impl EmailService {
             })?;
 
         let creds = Credentials::new(self.config.user.clone(), self.config.password.clone());
-
-        let mailer = SmtpTransport::relay(&self.config.host)?
-            .port(self.config.port)
-            .credentials(creds)
-            .build();
-
-        mailer
-            .send(&message)
-            .map(|_| info!("Email sent successfully"))
-            .map_err(|e| e.into())
+        self.email_sender
+            .send(self.config.port, &self.config.host, creds, message)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::env::{remove_var, set_var};
-    use fake::faker::internet::en::{Username, DomainSuffix, Password};
+    use fake::faker::internet::en::{DomainSuffix, Password, Username};
     use fake::faker::number::en::NumberWithFormat;
     use fake::Fake;
+    use std::env::{remove_var, set_var};
 
     use super::SmtpConfig;
 
@@ -157,7 +173,7 @@ mod tests {
         assert_eq!(username, smtp_config.user);
         assert_eq!(port.parse::<u16>().unwrap(), smtp_config.port);
         assert_eq!(password, smtp_config.password);
-        
+
         remove_var("EMAIL_HOST");
         remove_var("EMAIL_USER");
         remove_var("EMAIL_PORT");
