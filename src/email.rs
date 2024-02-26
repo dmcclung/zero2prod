@@ -11,38 +11,40 @@ use anyhow::Result;
 
 use tracing::info;
 
-const DEFAULT_SENDER: &str = "admin@zero2prod.xyz";
-
 pub struct SmtpConfig {
     host: String,
     port: u16,
     user: String,
     password: String,
+    default_sender: String
 }
 
 impl SmtpConfig {
-    pub fn new(host: String, port: String, user: String, password: String) -> Self {
+    pub fn new(host: String, port: String, user: String, password: String, default_sender: String) -> Self {
         Self {
             host,
             port: port.parse::<u16>().unwrap(),
             user,
             password,
+            default_sender
         }
     }
 
     pub fn parse_from_env() -> Self {
         dotenv::dotenv().ok();
 
-        let host = env::var("EMAIL_HOST").unwrap_or("localhost".into());
-        let port = env::var("EMAIL_PORT").unwrap_or("528".into());
-        let user = env::var("EMAIL_USER").unwrap_or("user".into());
-        let password = env::var("EMAIL_PASSWORD").unwrap_or("password".into());
+        let host = env::var("EMAIL_HOST").unwrap();
+        let port = env::var("EMAIL_PORT").unwrap();
+        let user = env::var("EMAIL_USER").unwrap();
+        let password = env::var("EMAIL_PASSWORD").unwrap();
+        let default_sender = env::var("EMAIL_DEFAULT_SENDER").unwrap();
 
         Self {
             host,
             port: port.parse::<u16>().unwrap(),
             user,
             password,
+            default_sender
         }
     }
 }
@@ -125,7 +127,7 @@ impl<'a, T: EmailSender> EmailService<'a, T> {
     pub fn send_email(&mut self, email: Email) -> Result<()> {
         let to: Mailbox = email.to.parse()?;
         let from: Mailbox = if email.from.is_empty() {
-            DEFAULT_SENDER.parse()?
+            self.config.default_sender.parse()?
         } else {
             email.from.parse()?
         };
@@ -232,6 +234,7 @@ mod tests {
             NumberWithFormat("###").fake(),
             Username().fake(),
             Password(8..16).fake(),
+            SafeEmail().fake(),
         );
         let email_sender = &mut MockEmailSender::new();
 
