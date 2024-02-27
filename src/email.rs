@@ -16,17 +16,23 @@ pub struct SmtpConfig {
     port: u16,
     user: String,
     password: String,
-    default_sender: String
+    default_sender: String,
 }
 
 impl SmtpConfig {
-    pub fn new(host: String, port: String, user: String, password: String, default_sender: String) -> Self {
+    pub fn new(
+        host: String,
+        port: String,
+        user: String,
+        password: String,
+        default_sender: String,
+    ) -> Self {
         Self {
             host,
             port: port.parse::<u16>().unwrap(),
             user,
             password,
-            default_sender
+            default_sender,
         }
     }
 
@@ -44,7 +50,7 @@ impl SmtpConfig {
             port: port.parse::<u16>().unwrap(),
             user,
             password,
-            default_sender
+            default_sender,
         }
     }
 }
@@ -64,31 +70,31 @@ impl SmtpConfig {
 /// use zero2prod::email::Email;
 ///
 /// let email = Email {
-///     to: "recipient@example.com".to_string(),
-///     from: "sender@example.com".to_string(),
-///     subject: "Greetings!".to_string(),
-///     reply_to: "no-reply@example.com".to_string(),
-///     html: "<h1>Hello</h1><p>How are you?</p>".to_string(),
-///     plaintext: "Hello\nHow are you?".to_string(),
+///     to: "recipient@example.com",
+///     from: "sender@example.com",
+///     subject: "Greetings!",
+///     reply_to: "no-reply@example.com",
+///     html: "<h1>Hello</h1><p>How are you?</p>",
+///     plaintext: "Hello\nHow are you?",
 /// };
 /// ```
 #[derive(Debug)]
-pub struct Email {
+pub struct Email<'a> {
     /// The recipient's email address.
-    pub to: String,
+    pub to: &'a str,
     /// The HTML content of the email message. This field allows the inclusion of
     /// HTML tags for formatting purposes.
-    pub html: String,
+    pub html: &'a str,
     /// The sender's email address.
-    pub from: String,
+    pub from: &'a str,
     /// The subject of the email message.
-    pub subject: String,
+    pub subject: &'a str,
     /// The email address for reply-to field, which indicates where replies to the
     /// email should be sent.
-    pub reply_to: String,
+    pub reply_to: &'a str,
     /// The plaintext content of the email message. This field is used for email
     /// clients that do not support HTML content or as a fallback.
-    pub plaintext: String,
+    pub plaintext: &'a str,
 }
 
 pub trait EmailSender {
@@ -141,15 +147,15 @@ impl<'a, T: EmailSender> EmailService<'a, T> {
         }
 
         let message = message_builder
-            .header(if !email.html.is_empty() {
+            .header(if !String::from(email.html).is_empty() {
                 ContentType::TEXT_HTML
             } else {
                 ContentType::TEXT_PLAIN
             })
-            .body(if !email.html.is_empty() {
-                email.html
+            .body(if !String::from(email.html).is_empty() {
+                String::from(email.html)
             } else {
-                email.plaintext
+                String::from(email.plaintext)
             })?;
 
         let creds = Credentials::new(self.config.user.clone(), self.config.password.clone());
@@ -238,13 +244,18 @@ mod tests {
         );
         let email_sender = &mut MockEmailSender::new();
 
+        let to: String = SafeEmail().fake();
+        let from: String = SafeEmail().fake();
+        let subject: String = Sentence(1..5).fake();
+        let plaintext: String = Sentence(1..10).fake();
+
         let email = Email {
-            to: SafeEmail().fake(),
-            from: SafeEmail().fake(),
-            html: "".into(),
-            subject: Sentence(1..5).fake(),
-            reply_to: "".into(),
-            plaintext: Sentence(1..10).fake(),
+            to: &to,
+            from: &from,
+            html: "",
+            subject: &subject,
+            reply_to: "",
+            plaintext: &plaintext,
         };
 
         let mut email_service: EmailService<MockEmailSender> =
