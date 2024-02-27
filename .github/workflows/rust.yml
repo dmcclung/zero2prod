@@ -56,12 +56,14 @@ jobs:
     - name: Build
       run: cargo build --verbose
 
+    - name: test .env
+      run: echo "${{ secrets.TEST_ENV_FILE }}" > .env
+
     - name: Run tests
       run: DATABASE_URL=${{ secrets.DATABASE_URL }} cargo test --verbose
 
-    - name: Setup .env
-      run: |
-        echo "${{ secrets.ENV_FILE }}" > .env
+    - name: prod .env
+      run: echo "${{ secrets.ENV_FILE }}" > .env
 
     - name: Set up Docker Buildx      
       uses: docker/setup-buildx-action@v3
