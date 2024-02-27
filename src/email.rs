@@ -183,11 +183,13 @@ mod tests {
         let username: String = Username().fake();
         let port: String = NumberWithFormat("###").fake();
         let password: String = Password(8..16).fake();
+        let default_sender: String = SafeEmail().fake();
 
         set_var("EMAIL_HOST", hostname.clone());
         set_var("EMAIL_USER", username.clone());
         set_var("EMAIL_PORT", port.clone());
         set_var("EMAIL_PASSWORD", password.clone());
+        set_var("EMAIL_DEFAULT_SENDER", default_sender.clone());
 
         let smtp_config = SmtpConfig::parse_from_env();
 
@@ -195,11 +197,13 @@ mod tests {
         remove_var("EMAIL_USER");
         remove_var("EMAIL_PORT");
         remove_var("EMAIL_PASSWORD");
+        remove_var("EMAIL_DEFAULT_SENDER");
 
         assert_eq!(hostname, smtp_config.host);
         assert_eq!(username, smtp_config.user);
         assert_eq!(port.parse::<u16>().unwrap(), smtp_config.port);
         assert_eq!(password, smtp_config.password);
+        assert_eq!(default_sender, smtp_config.default_sender);
     }
 
     fn generate_hostname() -> String {
