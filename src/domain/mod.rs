@@ -1,3 +1,3 @@
-//! mod.rs
+//! src/domain/mod.rs
 
 pub mod subscriber;
