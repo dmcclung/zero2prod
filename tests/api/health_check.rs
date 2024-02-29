@@ -1,6 +1,6 @@
 //! tests/api/healh_check.rs
 
-use crate::spawn_app::spawn_app;
+use crate::utils::spawn_app;
 
 #[tokio::test]
 async fn health_check_ok() {
