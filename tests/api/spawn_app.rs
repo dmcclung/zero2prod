@@ -1,10 +1,10 @@
-//! tests/app.rs
+//! tests/api/utils.rs
 
 use std::net::TcpListener;
 
 use sqlx::postgres::PgPoolOptions;
 
-pub async fn spawn() -> Result<String, sqlx::Error> {
+pub async fn spawn_app() -> Result<String, sqlx::Error> {
     let config = zero2prod::config::Config::new();
     let pool = PgPoolOptions::new().connect(&config.db_config.url).await?;
     sqlx::migrate!().run(&pool).await?;

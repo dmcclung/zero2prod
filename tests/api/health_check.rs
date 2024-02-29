@@ -1,10 +1,10 @@
-//! tests/healh_check.rs
+//! tests/api/healh_check.rs
 
-mod app;
+use crate::spawn_app::spawn_app;
 
 #[tokio::test]
 async fn health_check_ok() {
-    let app_address = app::spawn().await.unwrap();
+    let app_address = spawn_app().await.unwrap();
 
     let client = reqwest::Client::new();
 

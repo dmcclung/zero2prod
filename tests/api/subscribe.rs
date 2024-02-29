@@ -1,7 +1,7 @@
 use fake::{faker, Fake};
 use sqlx::{Connection, PgConnection};
 
-mod app;
+use crate::spawn_app::spawn_app;
 
 #[tokio::test]
 async fn subscribe_returns_a_200_for_valid_form_data() {
@@ -10,7 +10,7 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
         .await
         .expect("Failed to connect to Postgres.");
 
-    let app_address = app::spawn().await.unwrap();
+    let app_address = spawn_app().await.unwrap();
 
     let client = reqwest::Client::new();
 
@@ -39,7 +39,7 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
 
 #[tokio::test]
 async fn subscribe_returns_a_400_when_data_is_missing() {
-    let app_address = app::spawn().await.unwrap();
+    let app_address = spawn_app().await.unwrap();
     let client = reqwest::Client::new();
 
     struct TestCase<'a> {
