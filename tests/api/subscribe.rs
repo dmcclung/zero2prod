@@ -1,7 +1,7 @@
 use fake::{faker, Fake};
 use sqlx::{Connection, PgConnection};
 
-use crate::spawn_app::spawn_app;
+use crate::utils::spawn_app;
 
 #[tokio::test]
 async fn subscribe_returns_a_200_for_valid_form_data() {
