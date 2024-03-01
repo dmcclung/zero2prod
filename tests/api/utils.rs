@@ -1,20 +1,21 @@
 //! tests/api/utils.rs
 
-use std::net::TcpListener;
+use anyhow::Result;
 
 use sqlx::postgres::PgPoolOptions;
+use zero2prod::app::Application;
 
-pub async fn spawn_app() -> Result<String, sqlx::Error> {
+pub async fn spawn_app() -> Result<String> {
     let config = zero2prod::config::Config::new();
-    let pool = PgPoolOptions::new().connect(&config.db_config.url).await?;
-    sqlx::migrate!().run(&pool).await?;
+
+    let app = Application::build(&config, "127.0.0.1:0".into()).await?;
+    
+    let _ = tokio::spawn(app.server);
+
+    let pool = PgPoolOptions::new().connect(&config.db_config.url).await?;    
     sqlx::query!("DELETE FROM subscriptions")
         .execute(&pool)
         .await?;
 
-    let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
-    let port = listener.local_addr().unwrap().port();
-    let server = zero2prod::run(listener, pool).expect("Failed to bind address");
-    let _ = tokio::spawn(server);
-    Ok(format!("http://127.0.0.1:{}", port))
+    Ok(format!("http://127.0.0.1:{}", app.port))
 }
