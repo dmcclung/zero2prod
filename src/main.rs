@@ -1,17 +1,18 @@
-use sqlx::postgres::PgPoolOptions;
-use std::net::TcpListener;
+use zero2prod::config::Config;
+use anyhow::Result;
+
+use zero2prod::app::Application;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
 
-    let config = zero2prod::config::Config::new();
-
-    let pool = PgPoolOptions::new().connect(&config.db_config.url).await?;
-    sqlx::migrate!().run(&pool).await?;
-
+    let config = Config::new();
     let addr = format!("[::]:{}", config.port);
 
-    let listener = TcpListener::bind(addr)?;
-    Ok(zero2prod::run(listener, pool)?.await?)
+    let app = Application::build(&config, addr).await?;
+
+    app.server.await?;
+    
+    Ok(())
 }
