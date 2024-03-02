@@ -1,16 +1,16 @@
-use sqlx::postgres::PgPoolOptions;
-use crate::{config::Config, subscribe};
-use std::net::TcpListener;
+use crate::config::Config;
 use anyhow::Result;
+use sqlx::postgres::PgPoolOptions;
+use std::net::TcpListener;
 
 use actix_web::{dev::Server, middleware::Logger, web, App, HttpServer};
 use sqlx::{Pool, Postgres};
 
-use crate::health_check;
+use crate::routes::{health_check, subscribe};
 
 pub struct Application {
     pub port: u16,
-    pub server: Server
+    pub server: Server,
 }
 
 impl Application {
@@ -22,20 +22,14 @@ impl Application {
         let port = listener.local_addr().unwrap().port();
         let server = Self::run(listener, pool)?;
 
-        Ok(Self {
-            port,
-            server
-        })
+        Ok(Self { port, server })
     }
 
-    pub fn run(
-        listener: TcpListener,
-        pool: Pool<Postgres>,
-    ) -> Result<Server> {
+    pub fn run(listener: TcpListener, pool: Pool<Postgres>) -> Result<Server> {
         let pool = web::Data::new(pool);
         let server = HttpServer::new(move || {
             let pool = pool.clone();
-    
+
             App::new()
                 .wrap(Logger::default())
                 .route("/health_check", web::get().to(health_check))
