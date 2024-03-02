@@ -11,8 +11,7 @@ async fn main() -> Result<()> {
     let addr = format!("[::]:{}", config.port);
 
     let app = Application::build(&config, addr).await?;
-
-    app.server.await?;
+    app.run_until_stopped().await?;
 
     Ok(())
 }

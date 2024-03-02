@@ -9,11 +9,11 @@ use sqlx::{Pool, Postgres};
 use crate::routes::{health_check, subscribe};
 
 pub struct Application {
-    pub port: u16,
-    pub server: Server,
+    port: u16,
+    server: Server,
 }
 
-impl Application {
+impl<'a> Application {
     pub async fn build(config: &Config, addr: String) -> Result<Self> {
         let pool = PgPoolOptions::new().connect(&config.db_config.url).await?;
         sqlx::migrate!().run(&pool).await?;
@@ -25,7 +25,7 @@ impl Application {
         Ok(Self { port, server })
     }
 
-    pub fn run(listener: TcpListener, pool: Pool<Postgres>) -> Result<Server> {
+    fn run(listener: TcpListener, pool: Pool<Postgres>) -> Result<Server> {
         let pool = web::Data::new(pool);
         let server = HttpServer::new(move || {
             let pool = pool.clone();
@@ -39,5 +39,13 @@ impl Application {
         .listen(listener)?
         .run();
         Ok(server)
+    }
+
+    pub fn port(&self) -> u16 {
+        self.port
+    }
+
+    pub async fn run_until_stopped(self) -> Result<(), std::io::Error> {
+        self.server.await
     }
 }
