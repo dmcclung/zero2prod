@@ -1,5 +1,5 @@
-use zero2prod::config::Config;
 use anyhow::Result;
+use zero2prod::config::Config;
 
 use zero2prod::app::Application;
 
@@ -13,6 +13,6 @@ async fn main() -> Result<()> {
     let app = Application::build(&config, addr).await?;
 
     app.server.await?;
-    
+
     Ok(())
 }
