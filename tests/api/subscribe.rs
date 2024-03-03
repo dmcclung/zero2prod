@@ -1,16 +1,12 @@
+use claims::assert_ok;
 use fake::{faker, Fake};
-use sqlx::{Connection, PgConnection};
 
 use crate::utils::spawn_app;
 
 #[tokio::test]
 async fn subscribe_returns_a_200_for_valid_form_data() {
-    let config = zero2prod::config::Config::new();
-    let mut connection = PgConnection::connect(&config.db_config.url)
-        .await
-        .expect("Failed to connect to Postgres.");
-
-    let app_address = spawn_app().await.unwrap();
+    let test_app = spawn_app().await.unwrap();
+    assert_ok!(test_app.reset_subscriptions().await);
 
     let client = reqwest::Client::new();
 
@@ -20,7 +16,7 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
     let body = format!("name={}&email={}", name, email);
 
     let response = client
-        .post(&format!("{}/subscriptions", &app_address))
+        .post(&format!("{}/subscriptions", &test_app.address()))
         .header("Content-Type", "application/x-www-form-urlencoded")
         .body(body)
         .send()
@@ -29,17 +25,14 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
 
     assert_eq!(200, response.status().as_u16());
 
-    let saved = sqlx::query!("SELECT email, name FROM subscriptions")
-        .fetch_one(&mut connection)
-        .await
-        .expect("Failed to fetch saved subscription");
-    assert_eq!(saved.email, email);
-    assert_eq!(saved.name, name);
+    let subscription = test_app.get_subscription().await;
+    assert_eq!(subscription.0, email);
+    assert_eq!(subscription.1, name);
 }
 
 #[tokio::test]
 async fn subscribe_returns_a_400_when_data_is_missing() {
-    let app_address = spawn_app().await.unwrap();
+    let test_app = spawn_app().await.unwrap();
     let client = reqwest::Client::new();
 
     struct TestCase<'a> {
@@ -68,7 +61,7 @@ async fn subscribe_returns_a_400_when_data_is_missing() {
 
     for test_case in test_cases {
         let response = client
-            .post(&format!("{}/subscriptions", &app_address))
+            .post(&format!("{}/subscriptions", test_app.address()))
             .header("Content-Type", "application/x-www-form-urlencoded")
             .body(test_case.body)
             .send()
