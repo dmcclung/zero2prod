@@ -8,18 +8,11 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
     let test_app = spawn_app().await.unwrap();
     assert_ok!(test_app.reset_subscriptions().await);
 
-    let client = reqwest::Client::new();
-
     let name: String = faker::name::en::FirstName().fake();
     let email: String = faker::internet::en::SafeEmail().fake();
 
-    let body = format!("name={}&email={}", name, email);
-
-    let response = client
-        .post(&format!("{}/subscriptions", &test_app.address()))
-        .header("Content-Type", "application/x-www-form-urlencoded")
-        .body(body)
-        .send()
+    let response = test_app
+        .post_subscriptions(name.clone(), email.clone())
         .await
         .expect("Failed to execute request.");
 
@@ -33,38 +26,40 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
 #[tokio::test]
 async fn subscribe_returns_a_400_when_data_is_missing() {
     let test_app = spawn_app().await.unwrap();
-    let client = reqwest::Client::new();
+    assert_ok!(test_app.reset_subscriptions().await);
 
     struct TestCase<'a> {
-        body: &'a str,
+        name: &'a str,
+        email: &'a str,
         error_message: &'a str,
     }
 
     let test_cases = vec![
         TestCase {
-            body: "",
+            name: "",
+            email: "",
             error_message: "missing name and email",
         },
         TestCase {
-            body: "email=dev%40zero2prod.xyz",
+            name: "",
+            email: "dev%40zero2prod.xyz",
             error_message: "missing name",
         },
         TestCase {
-            body: "name=dev",
+            name: "dev",
+            email: "",
             error_message: "missing email",
         },
         TestCase {
-            body: "name=user&email=no-at-sign.com",
+            name: "user",
+            email: "no-at-sign.com",
             error_message: "malformed email",
         },
     ];
 
     for test_case in test_cases {
-        let response = client
-            .post(&format!("{}/subscriptions", test_app.address()))
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .body(test_case.body)
-            .send()
+        let response = test_app
+            .post_subscriptions(test_case.name.into(), test_case.email.into())
             .await
             .expect("Failed to execute request.");
 
