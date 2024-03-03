@@ -2,6 +2,7 @@
 
 use anyhow::Result;
 
+use reqwest::Response;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Pool, Postgres};
 use zero2prod::app::Application;
@@ -32,6 +33,22 @@ impl TestApp {
             .expect("Failed to fetch saved subscription");
 
         (subscription.email, subscription.name)
+    }
+
+    pub async fn post_subscriptions(
+        &self,
+        name: String,
+        email: String,
+    ) -> Result<Response, reqwest::Error> {
+        let body = format!("name={}&email={}", name, email);
+
+        let client = reqwest::Client::new();
+        client
+            .post(&format!("{}/subscriptions", self.address()))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(body)
+            .send()
+            .await
     }
 }
 
