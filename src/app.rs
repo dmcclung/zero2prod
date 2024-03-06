@@ -13,7 +13,7 @@ pub struct Application {
     server: Server,
 }
 
-impl<'a> Application {
+impl Application {
     pub async fn build(config: &Config, addr: String) -> Result<Self> {
         let pool = PgPoolOptions::new().connect(&config.db_config.url).await?;
         sqlx::migrate!().run(&pool).await?;
