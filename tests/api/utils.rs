@@ -2,15 +2,42 @@
 
 use anyhow::Result;
 
+use lettre::Message;
 use reqwest::Response;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Pool, Postgres};
 use zero2prod::app::Application;
 use zero2prod::config::Config;
+use zero2prod::email::{EmailSender, EmailService};
 
 pub struct TestApp {
     address: String,
     pool: Pool<Postgres>,
+}
+
+struct MockEmailSender {
+    sent_messages: Vec<Message>,
+}
+
+impl MockEmailSender {
+    fn new() -> Self {
+        Self {
+            sent_messages: Vec::new(),
+        }
+    }
+}
+
+impl EmailSender for MockEmailSender {
+    fn send(
+        &mut self,
+        _port: u16,
+        _host: &str,
+        _creds: lettre::transport::smtp::authentication::Credentials,
+        message: lettre::Message,
+    ) -> Result<()> {
+        self.sent_messages.push(message);
+        Ok(())
+    }
 }
 
 impl TestApp {
@@ -55,7 +82,10 @@ impl TestApp {
 pub async fn spawn_app() -> Result<TestApp> {
     let config = Config::new();
 
-    let app = Application::build(&config, "127.0.0.1:0".into()).await?;
+    let email_sender = &mut MockEmailSender::new();
+    let email_service = EmailService::new(config.smtp_config.clone(), email_sender);
+
+    let app = Application::build(&config, "127.0.0.1:0".into(), email_service).await?;
     let address = format!("http://127.0.0.1:{}", app.port());
     let _ = tokio::spawn(app.run_until_stopped());
 

@@ -11,6 +11,7 @@ use anyhow::Result;
 
 use tracing::info;
 
+#[derive(Clone)]
 pub struct SmtpConfig {
     host: String,
     port: u16,
