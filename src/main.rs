@@ -2,6 +2,7 @@ use anyhow::Result;
 use zero2prod::config::Config;
 
 use zero2prod::app::Application;
+use zero2prod::email::{EmailService, LettreEmailSender};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -10,7 +11,11 @@ async fn main() -> Result<()> {
     let config = Config::new();
     let addr = format!("[::]:{}", config.port);
 
-    let app = Application::build(&config, addr).await?;
+    static mut email_sender: LettreEmailSender = LettreEmailSender {};
+
+    let email_service = EmailService::new(config.smtp_config.clone(), &mut email_sender);
+
+    let app = Application::build(&config, addr, email_service).await?;
     app.run_until_stopped().await?;
 
     Ok(())

@@ -102,7 +102,7 @@ pub trait EmailSender {
     fn send(&mut self, port: u16, host: &str, creds: Credentials, message: Message) -> Result<()>;
 }
 
-struct LettreEmailSender;
+pub struct LettreEmailSender;
 
 impl EmailSender for LettreEmailSender {
     fn send(&mut self, port: u16, host: &str, creds: Credentials, message: Message) -> Result<()> {

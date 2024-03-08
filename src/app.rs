@@ -11,20 +11,20 @@ use sqlx::{Pool, Postgres};
 
 use crate::routes::{health_check, subscribe};
 
-pub struct Application<'a, T> {
+pub struct Application<T> {
     port: u16,
     server: Server,
-    _marker: PhantomData<&'a T>
+    _marker: PhantomData<T>
 }
 
-impl<'a, T> Application<'a, T>
+impl<T> Application<T>
 where
     T: EmailSender + Send + Sync + 'static,
 {
     pub async fn build(
         config: &Config,
         addr: String,
-        email_service: EmailService<'a, T>,
+        email_service: EmailService<'static, T>,
     ) -> Result<Self> {
         let pool = PgPoolOptions::new().connect(&config.db_config.url).await?;
         sqlx::migrate!().run(&pool).await?;
@@ -39,7 +39,7 @@ where
     fn run(
         listener: TcpListener,
         pool: Pool<Postgres>,
-        email_service: EmailService<'a, T>,
+        email_service: EmailService<'static, T>,
     ) -> Result<Server> {
         let pool = web::Data::new(pool);
         let email_service = web::Data::new(email_service);
@@ -52,6 +52,7 @@ where
                 .route("/health_check", web::get().to(health_check))
                 .route("/subscriptions", web::post().to(subscribe))
                 .app_data(pool)
+                .app_data(email_service)
         })
         .listen(listener)?
         .run();
