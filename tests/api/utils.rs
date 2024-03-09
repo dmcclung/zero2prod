@@ -1,8 +1,10 @@
 //! tests/api/utils.rs
 
-use anyhow::Result;
+use std::sync::{Arc, Mutex};
 
+use anyhow::Result;
 use lettre::Message;
+use once_cell::sync::Lazy;
 use reqwest::Response;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Pool, Postgres};
@@ -10,34 +12,34 @@ use zero2prod::app::Application;
 use zero2prod::config::Config;
 use zero2prod::email::{EmailSender, EmailService};
 
-pub struct TestApp {
-    address: String,
-    pool: Pool<Postgres>,
-}
-
-struct MockEmailSender {
-    sent_messages: Vec<Message>,
+pub struct MockEmailSender {
+    pub sent_messages: Arc<Mutex<Vec<Message>>>,
 }
 
 impl MockEmailSender {
     fn new() -> Self {
         Self {
-            sent_messages: Vec::new(),
+            sent_messages: Arc::new(Mutex::new(Vec::new())),
         }
     }
 }
 
 impl EmailSender for MockEmailSender {
     fn send(
-        &mut self,
+        &self,
         _port: u16,
         _host: &str,
         _creds: lettre::transport::smtp::authentication::Credentials,
         message: lettre::Message,
     ) -> Result<()> {
-        self.sent_messages.push(message);
+        self.sent_messages.lock().unwrap().push(message);
         Ok(())
     }
+}
+
+pub struct TestApp {
+    address: String,
+    pool: Pool<Postgres>,
 }
 
 impl TestApp {
@@ -82,8 +84,8 @@ impl TestApp {
 pub async fn spawn_app() -> Result<TestApp> {
     let config = Config::new();
 
-    let email_sender = &mut MockEmailSender::new();
-    let email_service = EmailService::new(config.smtp_config.clone(), email_sender);
+    static EMAIL_SENDER: Lazy<MockEmailSender> = Lazy::new(|| MockEmailSender::new());
+    let email_service = EmailService::new(config.smtp_config.clone(), &*EMAIL_SENDER);
 
     let app = Application::build(&config, "127.0.0.1:0".into(), email_service).await?;
     let address = format!("http://127.0.0.1:{}", app.port());

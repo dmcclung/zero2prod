@@ -11,9 +11,9 @@ async fn main() -> Result<()> {
     let config = Config::new();
     let addr = format!("[::]:{}", config.port);
 
-    static mut email_sender: LettreEmailSender = LettreEmailSender {};
+    static EMAIL_SENDER: LettreEmailSender = LettreEmailSender {};
 
-    let email_service = EmailService::new(config.smtp_config.clone(), &mut email_sender);
+    let email_service = EmailService::new(config.smtp_config.clone(), &EMAIL_SENDER);
 
     let app = Application::build(&config, addr, email_service).await?;
     app.run_until_stopped().await?;

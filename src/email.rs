@@ -99,13 +99,13 @@ pub struct Email<'a> {
 }
 
 pub trait EmailSender {
-    fn send(&mut self, port: u16, host: &str, creds: Credentials, message: Message) -> Result<()>;
+    fn send(&self, port: u16, host: &str, creds: Credentials, message: Message) -> Result<()>;
 }
 
 pub struct LettreEmailSender;
 
 impl EmailSender for LettreEmailSender {
-    fn send(&mut self, port: u16, host: &str, creds: Credentials, message: Message) -> Result<()> {
+    fn send(&self, port: u16, host: &str, creds: Credentials, message: Message) -> Result<()> {
         let mailer = SmtpTransport::relay(host)?
             .port(port)
             .credentials(creds)
@@ -120,11 +120,11 @@ impl EmailSender for LettreEmailSender {
 
 pub struct EmailService<'a, T: EmailSender> {
     config: SmtpConfig,
-    email_sender: &'a mut T,
+    email_sender: &'a T,
 }
 
 impl<'a, T: EmailSender> EmailService<'a, T> {
-    pub fn new(config: SmtpConfig, email_sender: &'a mut T) -> Self {
+    pub fn new(config: SmtpConfig, email_sender: &'a T) -> Self {
         Self {
             config,
             email_sender,
@@ -175,8 +175,34 @@ mod tests {
     use fake::Fake;
     use lettre::Message;
     use std::env::{remove_var, set_var};
+    use std::sync::{Arc, Mutex};
 
     use super::{Email, EmailSender, EmailService, SmtpConfig};
+
+    pub struct MockEmailSender {
+        pub sent_messages: Arc<Mutex<Vec<Message>>>,
+    }
+
+    impl MockEmailSender {
+        fn new() -> Self {
+            Self {
+                sent_messages: Arc::new(Mutex::new(Vec::new())),
+            }
+        }
+    }
+
+    impl EmailSender for MockEmailSender {
+        fn send(
+            &self,
+            _port: u16,
+            _host: &str,
+            _creds: lettre::transport::smtp::authentication::Credentials,
+            message: lettre::Message,
+        ) -> Result<()> {
+            self.sent_messages.lock().unwrap().push(message);
+            Ok(())
+        }
+    }
 
     #[test]
     fn smtp_config_from_env() {
@@ -213,31 +239,6 @@ mod tests {
         format!("smtp.{}.{}", domain, domain_suffix)
     }
 
-    struct MockEmailSender {
-        sent_messages: Vec<Message>,
-    }
-
-    impl MockEmailSender {
-        fn new() -> Self {
-            Self {
-                sent_messages: Vec::new(),
-            }
-        }
-    }
-
-    impl EmailSender for MockEmailSender {
-        fn send(
-            &mut self,
-            _port: u16,
-            _host: &str,
-            _creds: lettre::transport::smtp::authentication::Credentials,
-            message: lettre::Message,
-        ) -> Result<()> {
-            self.sent_messages.push(message);
-            Ok(())
-        }
-    }
-
     #[test]
     fn send_valid_email() {
         let smtp_config = SmtpConfig::new(
@@ -247,7 +248,7 @@ mod tests {
             Password(8..16).fake(),
             SafeEmail().fake(),
         );
-        let email_sender = &mut MockEmailSender::new();
+        let email_sender = &MockEmailSender::new();
 
         let to: String = SafeEmail().fake();
         let from: String = SafeEmail().fake();
@@ -268,6 +269,6 @@ mod tests {
         let res = email_service.send_email(email);
 
         assert_ok!(res);
-        assert_eq!(1, email_sender.sent_messages.len());
+        assert_eq!(1, email_sender.sent_messages.lock().unwrap().len());
     }
 }
