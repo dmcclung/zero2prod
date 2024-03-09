@@ -1,40 +1,58 @@
-use crate::config::Config;
+use crate::{
+    config::Config,
+    email::{EmailSender, EmailService},
+};
 use anyhow::Result;
 use sqlx::postgres::PgPoolOptions;
-use std::net::TcpListener;
+use std::{marker::PhantomData, net::TcpListener};
 
 use actix_web::{dev::Server, middleware::Logger, web, App, HttpServer};
 use sqlx::{Pool, Postgres};
 
 use crate::routes::{health_check, subscribe};
 
-pub struct Application {
+pub struct Application<T> {
     port: u16,
     server: Server,
+    _marker: PhantomData<T>
 }
 
-impl Application {
-    pub async fn build(config: &Config, addr: String) -> Result<Self> {
+impl<T> Application<T>
+where
+    T: EmailSender + Send + Sync + 'static,
+{
+    pub async fn build(
+        config: &Config,
+        addr: String,
+        email_service: EmailService<'static, T>,
+    ) -> Result<Self> {
         let pool = PgPoolOptions::new().connect(&config.db_config.url).await?;
         sqlx::migrate!().run(&pool).await?;
 
         let listener = TcpListener::bind(addr)?;
         let port = listener.local_addr().unwrap().port();
-        let server = Self::run(listener, pool)?;
+        let server = Self::run(listener, pool, email_service)?;
 
-        Ok(Self { port, server })
+        Ok(Self { port, server, _marker: PhantomData })
     }
 
-    fn run(listener: TcpListener, pool: Pool<Postgres>) -> Result<Server> {
+    fn run(
+        listener: TcpListener,
+        pool: Pool<Postgres>,
+        email_service: EmailService<'static, T>,
+    ) -> Result<Server> {
         let pool = web::Data::new(pool);
+        let email_service = web::Data::new(email_service);
         let server = HttpServer::new(move || {
             let pool = pool.clone();
+            let email_service = email_service.clone();
 
             App::new()
                 .wrap(Logger::default())
                 .route("/health_check", web::get().to(health_check))
                 .route("/subscriptions", web::post().to(subscribe))
                 .app_data(pool)
+                .app_data(email_service)
         })
         .listen(listener)?
         .run();

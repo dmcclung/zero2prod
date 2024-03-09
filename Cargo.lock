@@ -2874,6 +2874,7 @@ dependencies = [
  "fake",
  "lettre",
  "log",
+ "once_cell",
  "quickcheck",
  "quickcheck_macros",
  "regex",
