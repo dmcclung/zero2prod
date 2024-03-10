@@ -4,7 +4,12 @@ use crate::{
 };
 use anyhow::Result;
 use sqlx::postgres::PgPoolOptions;
-use std::{marker::PhantomData, net::TcpListener};
+use std::{
+    fmt::Debug,
+    marker::PhantomData,
+    net::TcpListener,
+    sync::{Arc, Mutex},
+};
 
 use actix_web::{dev::Server, middleware::Logger, web, App, HttpServer};
 use sqlx::{Pool, Postgres};
@@ -14,12 +19,12 @@ use crate::routes::{health_check, subscribe};
 pub struct Application<T> {
     port: u16,
     server: Server,
-    _marker: PhantomData<T>
+    _marker: PhantomData<T>,
 }
 
 impl<T> Application<T>
 where
-    T: EmailSender + Send + Sync + 'static,
+    T: EmailSender + Debug + Send + Sync + 'static,
 {
     pub async fn build(
         config: &Config,
@@ -33,7 +38,11 @@ where
         let port = listener.local_addr().unwrap().port();
         let server = Self::run(listener, pool, email_service)?;
 
-        Ok(Self { port, server, _marker: PhantomData })
+        Ok(Self {
+            port,
+            server,
+            _marker: PhantomData,
+        })
     }
 
     fn run(
@@ -42,7 +51,7 @@ where
         email_service: EmailService<'static, T>,
     ) -> Result<Server> {
         let pool = web::Data::new(pool);
-        let email_service = web::Data::new(email_service);
+        let email_service = web::Data::new(Arc::new(Mutex::new(email_service)));
         let server = HttpServer::new(move || {
             let pool = pool.clone();
             let email_service = email_service.clone();
@@ -50,7 +59,7 @@ where
             App::new()
                 .wrap(Logger::default())
                 .route("/health_check", web::get().to(health_check))
-                .route("/subscriptions", web::post().to(subscribe))
+                .route("/subscriptions", web::post().to(subscribe::<T>))
                 .app_data(pool)
                 .app_data(email_service)
         })
