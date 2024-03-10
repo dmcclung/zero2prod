@@ -38,12 +38,13 @@ impl EmailSender for MockEmailSender {
     }
 }
 
-pub struct TestApp {
+pub struct TestApp<'a> {
     address: String,
     pool: Pool<Postgres>,
+    mock_email_sender: &'a MockEmailSender
 }
 
-impl TestApp {
+impl<'a> TestApp<'a> {
     pub fn address(&self) -> &str {
         &self.address
     }
@@ -80,9 +81,13 @@ impl TestApp {
             .send()
             .await
     }
+
+    pub fn get_emails_sent(&self) -> usize {
+        self.mock_email_sender.sent_messages.lock().unwrap().len()
+    }
 }
 
-pub async fn spawn_app() -> Result<TestApp> {
+pub async fn spawn_app() -> Result<TestApp<'static>> {
     let config = Config::new();
 
     static EMAIL_SENDER: Lazy<MockEmailSender> = Lazy::new(|| MockEmailSender::new());
@@ -94,5 +99,5 @@ pub async fn spawn_app() -> Result<TestApp> {
 
     let pool = PgPoolOptions::new().connect(&config.db_config.url).await?;
 
-    Ok(TestApp { address, pool })
+    Ok(TestApp { address, pool, mock_email_sender: &*EMAIL_SENDER })
 }
