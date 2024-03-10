@@ -1,9 +1,14 @@
-use crate::domain::subscriber::{NewSubscriber, SubscriberEmail, SubscriberError, SubscriberName};
+use crate::{
+    domain::subscriber::{NewSubscriber, SubscriberEmail, SubscriberError, SubscriberName},
+    email::{Email, EmailSender, EmailService},
+};
 use actix_web::{web, HttpResponse};
 use anyhow::Result;
 use chrono::Utc;
 use serde::Deserialize;
 use sqlx::{Pool, Postgres};
+use std::fmt::Debug;
+use std::sync::{Arc, Mutex};
 use tracing::{error, info, instrument, Instrument};
 use uuid::Uuid;
 
@@ -29,9 +34,10 @@ fn parse_subscriber(data: SubscriberFormData) -> Result<NewSubscriber, Subscribe
         subscriber_name = %data.name
     )
 )]
-pub async fn subscribe(
+pub async fn subscribe<'a, T: EmailSender + Debug>(
     data: web::Form<SubscriberFormData>,
     pool: web::Data<Pool<Postgres>>,
+    email_service: web::Data<Arc<Mutex<EmailService<'a, T>>>>,
 ) -> HttpResponse {
     info!("Adding a new subscriber");
 
@@ -57,7 +63,24 @@ pub async fn subscribe(
     match result {
         Ok(_) => {
             info!("New subscriber details has been saved");
-            HttpResponse::Ok().finish()
+            let email = Email {
+                to: new_subscriber.email.as_ref(),
+                from: "",
+                subject: "Welcome to zero2prod.xyz",
+                reply_to: "",
+                plaintext: "We're glad you're here",
+                html: "",
+            };
+            match email_service.lock().unwrap().send_email(email) {
+                Ok(_) => {
+                    info!("Email sent");
+                    HttpResponse::Ok().finish()
+                }
+                Err(e) => {
+                    error!("Failed to send email: {:?}", e);
+                    HttpResponse::InternalServerError().finish()
+                }
+            }
         }
         Err(e) => {
             error!("Failed to execute query: {:?}", e);
