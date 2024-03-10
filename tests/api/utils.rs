@@ -12,6 +12,7 @@ use zero2prod::app::Application;
 use zero2prod::config::Config;
 use zero2prod::email::{EmailSender, EmailService};
 
+#[derive(Debug)]
 pub struct MockEmailSender {
     pub sent_messages: Arc<Mutex<Vec<Message>>>,
 }
