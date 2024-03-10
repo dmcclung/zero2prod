@@ -21,6 +21,8 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
     let subscription = test_app.get_subscription().await;
     assert_eq!(subscription.0, email);
     assert_eq!(subscription.1, name);
+
+    // TODO: test app needs to return email_service
 }
 
 #[tokio::test]
