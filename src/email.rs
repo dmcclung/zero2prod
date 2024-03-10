@@ -11,7 +11,7 @@ use anyhow::Result;
 
 use tracing::info;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SmtpConfig {
     host: String,
     port: u16,
@@ -102,6 +102,7 @@ pub trait EmailSender {
     fn send(&self, port: u16, host: &str, creds: Credentials, message: Message) -> Result<()>;
 }
 
+#[derive(Debug)]
 pub struct LettreEmailSender;
 
 impl EmailSender for LettreEmailSender {
@@ -118,6 +119,7 @@ impl EmailSender for LettreEmailSender {
     }
 }
 
+#[derive(Debug)]
 pub struct EmailService<'a, T: EmailSender> {
     config: SmtpConfig,
     email_sender: &'a T,
