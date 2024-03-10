@@ -22,7 +22,7 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
     assert_eq!(subscription.0, email);
     assert_eq!(subscription.1, name);
 
-    // TODO: test app needs to return email_service
+    assert_eq!(test_app.get_emails_sent(), 1);
 }
 
 #[tokio::test]
