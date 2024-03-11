@@ -1,47 +1,19 @@
 //! tests/api/utils.rs
 
-use std::sync::{Arc, Mutex};
-
 use anyhow::Result;
-use lettre::Message;
 use once_cell::sync::Lazy;
 use reqwest::Response;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Pool, Postgres};
 use zero2prod::app::Application;
 use zero2prod::config::Config;
-use zero2prod::email::{EmailSender, EmailService};
-
-#[derive(Debug)]
-pub struct MockEmailSender {
-    pub sent_messages: Arc<Mutex<Vec<Message>>>,
-}
-
-impl MockEmailSender {
-    fn new() -> Self {
-        Self {
-            sent_messages: Arc::new(Mutex::new(Vec::new())),
-        }
-    }
-}
-
-impl EmailSender for MockEmailSender {
-    fn send(
-        &self,
-        _port: u16,
-        _host: &str,
-        _creds: lettre::transport::smtp::authentication::Credentials,
-        message: lettre::Message,
-    ) -> Result<()> {
-        self.sent_messages.lock().unwrap().push(message);
-        Ok(())
-    }
-}
+use zero2prod::email::mocks::MockEmailSender;
+use zero2prod::email::EmailService;
 
 pub struct TestApp<'a> {
     address: String,
     pool: Pool<Postgres>,
-    mock_email_sender: &'a MockEmailSender
+    mock_email_sender: &'a MockEmailSender,
 }
 
 impl<'a> TestApp<'a> {
@@ -87,7 +59,7 @@ impl<'a> TestApp<'a> {
     }
 }
 
-pub async fn spawn_app() -> Result<TestApp<'static>> {
+pub async fn spawn() -> Result<TestApp<'static>> {
     let config = Config::new();
 
     static EMAIL_SENDER: Lazy<MockEmailSender> = Lazy::new(|| MockEmailSender::new());
@@ -99,5 +71,9 @@ pub async fn spawn_app() -> Result<TestApp<'static>> {
 
     let pool = PgPoolOptions::new().connect(&config.db_config.url).await?;
 
-    Ok(TestApp { address, pool, mock_email_sender: &*EMAIL_SENDER })
+    Ok(TestApp {
+        address,
+        pool,
+        mock_email_sender: &*EMAIL_SENDER,
+    })
 }

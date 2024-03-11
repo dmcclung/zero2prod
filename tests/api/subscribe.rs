@@ -1,11 +1,11 @@
 use claims::assert_ok;
 use fake::{faker, Fake};
 
-use crate::utils::spawn_app;
+use crate::test_app::spawn;
 
 #[tokio::test]
 async fn subscribe_returns_a_200_for_valid_form_data() {
-    let test_app = spawn_app().await.unwrap();
+    let test_app = spawn().await.unwrap();
     assert_ok!(test_app.reset_subscriptions().await);
 
     let name: String = faker::name::en::FirstName().fake();
@@ -27,7 +27,7 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
 
 #[tokio::test]
 async fn subscribe_returns_a_400_when_data_is_missing() {
-    let test_app = spawn_app().await.unwrap();
+    let test_app = spawn().await.unwrap();
     assert_ok!(test_app.reset_subscriptions().await);
 
     struct TestCase<'a> {

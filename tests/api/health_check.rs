@@ -2,11 +2,11 @@
 
 use claims::assert_ok;
 
-use crate::utils::spawn_app;
+use crate::test_app::spawn;
 
 #[tokio::test]
 async fn health_check_ok() {
-    let test_app = spawn_app().await.unwrap();
+    let test_app = spawn().await.unwrap();
 
     assert_ok!(test_app.reset_subscriptions().await);
 

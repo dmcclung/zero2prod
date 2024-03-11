@@ -4,12 +4,7 @@ use crate::{
 };
 use anyhow::Result;
 use sqlx::postgres::PgPoolOptions;
-use std::{
-    fmt::Debug,
-    marker::PhantomData,
-    net::TcpListener,
-    sync::Mutex,
-};
+use std::{fmt::Debug, marker::PhantomData, net::TcpListener, sync::Mutex};
 
 use actix_web::{dev::Server, middleware::Logger, web, App, HttpServer};
 use sqlx::{Pool, Postgres};

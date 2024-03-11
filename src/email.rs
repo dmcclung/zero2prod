@@ -167,26 +167,26 @@ impl<'a, T: EmailSender> EmailService<'a, T> {
     }
 }
 
-#[cfg(test)]
-mod tests {
+pub mod mocks {
     use anyhow::Result;
-    use claims::assert_ok;
-    use fake::faker::internet::en::{DomainSuffix, Password, SafeEmail, Username};
-    use fake::faker::lorem::en::Sentence;
-    use fake::faker::number::en::NumberWithFormat;
-    use fake::Fake;
     use lettre::Message;
-    use std::env::{remove_var, set_var};
     use std::sync::{Arc, Mutex};
 
-    use super::{Email, EmailSender, EmailService, SmtpConfig};
+    use super::EmailSender;
 
+    #[derive(Debug)]
     pub struct MockEmailSender {
         pub sent_messages: Arc<Mutex<Vec<Message>>>,
     }
 
+    impl Default for MockEmailSender {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
+
     impl MockEmailSender {
-        fn new() -> Self {
+        pub fn new() -> Self {
             Self {
                 sent_messages: Arc::new(Mutex::new(Vec::new())),
             }
@@ -205,6 +205,21 @@ mod tests {
             Ok(())
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use claims::assert_ok;
+    use fake::faker::internet::en::{DomainSuffix, Password, SafeEmail, Username};
+    use fake::faker::lorem::en::Sentence;
+    use fake::faker::number::en::NumberWithFormat;
+    use fake::Fake;
+
+    use std::env::{remove_var, set_var};
+
+    use crate::email::mocks::MockEmailSender;
+
+    use super::{Email, EmailService, SmtpConfig};
 
     #[test]
     fn smtp_config_from_env() {
