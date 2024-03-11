@@ -8,7 +8,7 @@ use chrono::Utc;
 use serde::Deserialize;
 use sqlx::{Pool, Postgres};
 use std::fmt::Debug;
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 use tracing::{error, info, instrument, Instrument};
 use uuid::Uuid;
 
@@ -37,7 +37,7 @@ fn parse_subscriber(data: SubscriberFormData) -> Result<NewSubscriber, Subscribe
 pub async fn subscribe<'a, T: EmailSender + Debug>(
     data: web::Form<SubscriberFormData>,
     pool: web::Data<Pool<Postgres>>,
-    email_service: web::Data<Arc<Mutex<EmailService<'a, T>>>>,
+    email_service: web::Data<Mutex<EmailService<'a, T>>>,
 ) -> HttpResponse {
     info!("Adding a new subscriber");
 
