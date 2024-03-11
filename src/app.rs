@@ -8,7 +8,7 @@ use std::{
     fmt::Debug,
     marker::PhantomData,
     net::TcpListener,
-    sync::{Arc, Mutex},
+    sync::Mutex,
 };
 
 use actix_web::{dev::Server, middleware::Logger, web, App, HttpServer};
@@ -51,7 +51,7 @@ where
         email_service: EmailService<'static, T>,
     ) -> Result<Server> {
         let pool = web::Data::new(pool);
-        let email_service = web::Data::new(Arc::new(Mutex::new(email_service)));
+        let email_service = web::Data::new(Mutex::new(email_service));
         let server = HttpServer::new(move || {
             let pool = pool.clone();
             let email_service = email_service.clone();
