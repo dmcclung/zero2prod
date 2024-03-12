@@ -7,7 +7,7 @@
 
 ## Issue 1
 - Description: Check email content and fields in test
-- Status: Open
+- Status: Closed
 - Assigned to: @dmcclung
 
 ## Issue 2
@@ -22,5 +22,5 @@
 
 ## Issue 4
 - Description: Move email calls into it's own function
-- Status: Open
+- Status: Closed
 - Assigned to: @dmcclung

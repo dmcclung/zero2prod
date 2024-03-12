@@ -286,6 +286,20 @@ mod tests {
         let res = email_service.send_email(email);
 
         assert_ok!(res);
-        assert_eq!(1, email_sender.sent_messages.lock().unwrap().len());
+
+        let sent_messages = email_sender.sent_messages.lock().unwrap();
+        assert_eq!(1, sent_messages.len());
+
+        if let Some(message) = sent_messages.get(0) {
+            let headers_string = message.headers().to_string();
+            let to_header = headers_string
+                .lines()
+                .find(|line| line.starts_with("To:"))
+                .map(|line| line.trim_start_matches("To:").trim())
+                .unwrap_or("");
+            assert_eq!(to, to_header);
+        } else {
+            panic!("Message not sent");
+        }
     }
 }
