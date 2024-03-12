@@ -63,15 +63,7 @@ pub async fn subscribe<'a, T: EmailSender + Debug>(
     match result {
         Ok(_) => {
             info!("New subscriber details has been saved");
-            let email = Email {
-                to: new_subscriber.email.as_ref(),
-                from: "",
-                subject: "Welcome to zero2prod.xyz",
-                reply_to: "",
-                plaintext: "We're glad you're here",
-                html: "",
-            };
-            match email_service.lock().unwrap().send_email(email) {
+            match send_confirmation_email(new_subscriber.email.as_ref(), email_service) {
                 Ok(_) => {
                     info!("Email sent");
                     HttpResponse::Ok().finish()
@@ -87,4 +79,19 @@ pub async fn subscribe<'a, T: EmailSender + Debug>(
             HttpResponse::InternalServerError().finish()
         }
     }
+}
+
+fn send_confirmation_email<T: EmailSender>(
+    new_subscriber_email: &str,
+    email_service: web::Data<Mutex<EmailService<'_, T>>>,
+) -> Result<()> {
+    let email = Email {
+        to: new_subscriber_email,
+        from: "",
+        subject: "Welcome to zero2prod.xyz",
+        reply_to: "",
+        plaintext: "We're glad you're here",
+        html: "",
+    };
+    email_service.lock().unwrap().send_email(email)
 }
