@@ -23,6 +23,12 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
     assert_eq!(subscription.1, name);
 
     assert_eq!(test_app.get_emails_sent(), 1);
+    assert_eq!(
+        test_app.email_body_contains(
+            "https://zero2prod.xyz/con=\r\nfirm?token=3Da1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0"
+        ),
+        true
+    );
 }
 
 #[tokio::test]
