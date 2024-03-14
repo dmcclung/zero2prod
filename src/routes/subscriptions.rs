@@ -91,7 +91,7 @@ fn send_confirmation_email<T: EmailSender>(
         subject: "Welcome to zero2prod.xyz",
         reply_to: "",
         plaintext: "We're glad you're here, confirm your subscription https://zero2prod.xyz/confirm?token=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0",
-        html: "",
+        html: "<h1>We're glad you're here</h1><p>confirm your <a href='https://zero2prod.xyz/confirm?token=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0'>subscription</a></p>",
     };
     email_service.lock().unwrap().send_email(email)
 }

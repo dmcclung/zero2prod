@@ -2,8 +2,7 @@
 
 use std::env;
 
-use lettre::message::header::ContentType;
-use lettre::message::Mailbox;
+use lettre::message::{Mailbox, MultiPart};
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{Message, SmtpTransport, Transport};
 
@@ -149,17 +148,10 @@ impl<'a, T: EmailSender> EmailService<'a, T> {
             message_builder = message_builder.reply_to(reply_to);
         }
 
-        let message = message_builder
-            .header(if !String::from(email.html).is_empty() {
-                ContentType::TEXT_HTML
-            } else {
-                ContentType::TEXT_PLAIN
-            })
-            .body(if !String::from(email.html).is_empty() {
-                String::from(email.html)
-            } else {
-                String::from(email.plaintext)
-            })?;
+        let message = message_builder.multipart(MultiPart::alternative_plain_html(
+            email.plaintext.to_string(),
+            email.html.to_string(),
+        ))?;
 
         let creds = Credentials::new(self.config.user.clone(), self.config.password.clone());
         self.email_sender
