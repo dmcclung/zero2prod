@@ -4,6 +4,7 @@ use std::env;
 
 use lettre::message::{Mailbox, MultiPart};
 use lettre::transport::smtp::authentication::Credentials;
+use lettre::transport::smtp::client::{Tls, TlsParameters};
 use lettre::{Message, SmtpTransport, Transport};
 
 use anyhow::Result;
@@ -106,7 +107,12 @@ pub struct LettreEmailSender;
 
 impl EmailSender for LettreEmailSender {
     fn send(&self, port: u16, host: &str, creds: Credentials, message: Message) -> Result<()> {
+        let tls_parameters = TlsParameters::builder(host.into())            
+            .build()
+            .unwrap();
+        
         let mailer = SmtpTransport::relay(host)?
+            .tls(Tls::Required(tls_parameters))
             .port(port)
             .credentials(creds)
             .build();

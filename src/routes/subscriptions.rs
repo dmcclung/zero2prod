@@ -27,7 +27,7 @@ fn parse_subscriber(data: SubscriberFormData) -> Result<NewSubscriber, Subscribe
 }
 
 #[instrument(
-    skip(data, pool),
+    skip(data, pool, email_service),
     fields(
         request_id = %Uuid::new_v4(),
         subscriber_email = %data.email,
