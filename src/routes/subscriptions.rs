@@ -4,6 +4,7 @@ use crate::{
 };
 use actix_web::{web, HttpResponse};
 use anyhow::Result;
+use askama::Template;
 use chrono::Utc;
 use serde::Deserialize;
 use sqlx::{Pool, Postgres};
@@ -81,17 +82,33 @@ pub async fn subscribe<'a, T: EmailSender + Debug>(
     }
 }
 
+#[derive(Template)]
+#[template(path = "confirmation/email.html")]
+struct ConfirmationEmailHtmlTemplate {}
+
+#[derive(Template)]
+#[template(path = "confirmation/email.txt")]
+struct ConfirmationEmailTxtTemplate {}
+
+#[derive(Template)]
+#[template(path = "confirmation/subject.txt")]
+struct ConfirmationEmailSubject {}
+
 fn send_confirmation_email<T: EmailSender>(
     new_subscriber_email: &str,
     email_service: web::Data<Mutex<EmailService<'_, T>>>,
 ) -> Result<()> {
+    let confirm_email_html = ConfirmationEmailHtmlTemplate {};
+    let confirm_email_plaintext = ConfirmationEmailTxtTemplate {};
+    let confirm_subject = ConfirmationEmailSubject {};
+
     let email = Email {
         to: new_subscriber_email,
         from: "",
-        subject: "Welcome to zero2prod.xyz",
+        subject: &confirm_subject.render().unwrap(),
         reply_to: "",
-        plaintext: "We're glad you're here, confirm your subscription https://zero2prod.xyz/confirm?token=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0",
-        html: "<h1>We're glad you're here</h1><p>confirm your <a href='https://zero2prod.xyz/confirm?token=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0'>subscription</a></p>",
+        plaintext: &confirm_email_plaintext.render().unwrap(),
+        html: &confirm_email_html.render().unwrap(),
     };
     email_service.lock().unwrap().send_email(email)
 }

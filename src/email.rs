@@ -107,10 +107,8 @@ pub struct LettreEmailSender;
 
 impl EmailSender for LettreEmailSender {
     fn send(&self, port: u16, host: &str, creds: Credentials, message: Message) -> Result<()> {
-        let tls_parameters = TlsParameters::builder(host.into())            
-            .build()
-            .unwrap();
-        
+        let tls_parameters = TlsParameters::builder(host.into()).build().unwrap();
+
         let mailer = SmtpTransport::relay(host)?
             .tls(Tls::Required(tls_parameters))
             .port(port)
