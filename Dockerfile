@@ -8,6 +8,7 @@ WORKDIR /app
 
 COPY src ./src
 COPY migrations ./migrations
+COPY templates ./templates
 COPY .sqlx ./.sqlx
 COPY .env Cargo.lock Cargo.toml ./
 
@@ -20,6 +21,7 @@ WORKDIR /app
 
 COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/zero2prod ./zero2prod
 COPY --from=builder /app/migrations ./migrations
+COPY --from=builder /app/templates ./templates
 COPY --from=builder /app/.env ./.env
 
 ENTRYPOINT [ "./zero2prod" ]
