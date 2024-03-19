@@ -1,14 +1,10 @@
 //! tests/api/healh_check.rs
 
-use claims::assert_ok;
-
 use crate::test_app::spawn;
 
 #[tokio::test]
 async fn health_check_ok() {
     let test_app = spawn().await.unwrap();
-
-    assert_ok!(test_app.reset_subscriptions().await);
 
     let client = reqwest::Client::new();
 
