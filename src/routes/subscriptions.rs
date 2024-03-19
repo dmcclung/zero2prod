@@ -51,26 +51,53 @@ pub async fn subscribe<'a, T: EmailSender + Debug>(
         r#"
         INSERT INTO subscriptions (id, email, name, subscribed_at, status)
         VALUES ($1, $2, $3, $4, 'confirmed')
+        RETURNING id, email, name, subscribed_at, status
         "#,
         Uuid::new_v4(),
         new_subscriber.email.as_ref(),
         new_subscriber.name.as_ref(),
         Utc::now()
     )
-    .execute(pool.get_ref())
+    .fetch_one(pool.get_ref())
     .instrument(tracing::info_span!("add subscriber query"))
     .await;
 
     match result {
-        Ok(_) => {
+        Ok(sub_record) => {
             info!("New subscriber details has been saved");
-            match send_confirmation_email(new_subscriber.email.as_ref(), email_service) {
+
+            println!("sub_record.id {}", sub_record.id);
+            
+            let subscription_token = Uuid::new_v4().to_string();
+            println!("new token {}", subscription_token);
+            let result = sqlx::query!(
+                r#"
+                INSERT INTO subscription_tokens (subscription_token, subscriber_id)
+                VALUES ($1, $2)
+                "#,
+                subscription_token,
+                sub_record.id                
+            )
+            .execute(pool.get_ref())
+            .instrument(tracing::info_span!("add subscription token query"))
+            .await;
+
+            match result {
                 Ok(_) => {
-                    info!("Email sent");
-                    HttpResponse::Ok().finish()
-                }
+                    match send_confirmation_email(&sub_record.email, &subscription_token, email_service) {
+                        Ok(_) => {
+                            info!("Email sent");
+                            HttpResponse::Ok().finish()
+                        }
+                        Err(e) => {
+                            error!("Failed to send email: {:?}", e);
+                            HttpResponse::InternalServerError().finish()
+                        }
+                    }
+                },
                 Err(e) => {
-                    error!("Failed to send email: {:?}", e);
+                    error!("Failed to insert subscription token query: {:?}", e);
+                    println!("{}", e);
                     HttpResponse::InternalServerError().finish()
                 }
             }
@@ -84,11 +111,15 @@ pub async fn subscribe<'a, T: EmailSender + Debug>(
 
 #[derive(Template)]
 #[template(path = "confirmation/email.html")]
-struct ConfirmationEmailHtmlTemplate {}
+struct ConfirmationEmailHtmlTemplate<'a> {
+    token: &'a str
+}
 
 #[derive(Template)]
 #[template(path = "confirmation/email.txt")]
-struct ConfirmationEmailTxtTemplate {}
+struct ConfirmationEmailTxtTemplate<'a> {
+    token: &'a str
+}
 
 #[derive(Template)]
 #[template(path = "confirmation/subject.txt")]
@@ -96,10 +127,16 @@ struct ConfirmationEmailSubject {}
 
 fn send_confirmation_email<T: EmailSender>(
     new_subscriber_email: &str,
+    token: &str,
     email_service: web::Data<Mutex<EmailService<'_, T>>>,
 ) -> Result<()> {
-    let confirm_email_html = ConfirmationEmailHtmlTemplate {};
-    let confirm_email_plaintext = ConfirmationEmailTxtTemplate {};
+    println!("token string passed into send_confirmation_email {}", token);
+    let confirm_email_html = ConfirmationEmailHtmlTemplate {
+        token
+    };
+    let confirm_email_plaintext = ConfirmationEmailTxtTemplate {
+        token
+    };
     let confirm_subject = ConfirmationEmailSubject {};
 
     let email = Email {
