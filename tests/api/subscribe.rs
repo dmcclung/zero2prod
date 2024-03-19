@@ -1,12 +1,10 @@
-use claims::assert_ok;
 use fake::{faker, Fake};
 
 use crate::test_app::spawn;
 
 #[tokio::test]
 async fn subscribe_returns_a_200_for_valid_form_data() {
-    let test_app = spawn().await.unwrap();
-    assert_ok!(test_app.reset_subscriptions().await);
+    let test_app = spawn().await.unwrap();    
 
     let name: String = faker::name::en::FirstName().fake();
     let email: String = faker::internet::en::SafeEmail().fake();
@@ -18,14 +16,14 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
 
     assert_eq!(200, response.status().as_u16());
 
-    let subscription = test_app.get_subscription().await;
-    assert_eq!(subscription.0, email);
-    assert_eq!(subscription.1, name);
-
+    let subscriber_id = test_app.get_subscription(&name, &email).await;
+    let subscription_token = test_app.get_subscription_token(subscriber_id).await;
+    
     assert_eq!(test_app.get_emails_sent(), 1);
+
     assert_eq!(
         test_app.email_body_contains(
-            "https://zero2prod.xyz/con=\r\nfirm?token=3Da1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0"
+            &format!("https://zero2prod.xyz/con=\r\nfirm?token=3D{}", subscription_token)
         ),
         true
     );
@@ -33,8 +31,7 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
 
 #[tokio::test]
 async fn subscribe_returns_a_400_when_data_is_missing() {
-    let test_app = spawn().await.unwrap();
-    assert_ok!(test_app.reset_subscriptions().await);
+    let test_app = spawn().await.unwrap();    
 
     struct TestCase<'a> {
         name: &'a str,
