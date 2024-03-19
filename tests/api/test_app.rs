@@ -5,6 +5,7 @@ use once_cell::sync::Lazy;
 use reqwest::Response;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Pool, Postgres};
+use uuid::Uuid;
 use zero2prod::app::Application;
 use zero2prod::config::Config;
 use zero2prod::email::mocks::MockEmailSender;
@@ -19,23 +20,29 @@ pub struct TestApp<'a> {
 impl<'a> TestApp<'a> {
     pub fn address(&self) -> &str {
         &self.address
-    }
+    }    
 
-    pub async fn reset_subscriptions(&self) -> Result<()> {
-        sqlx::query!("DELETE FROM subscriptions")
-            .execute(&self.pool)
-            .await?;
-
-        Ok(())
-    }
-
-    pub async fn get_subscription(&self) -> (String, String) {
-        let subscription = sqlx::query!("SELECT email, name FROM subscriptions")
+    pub async fn get_subscription(&self, subscriber_name: &String, subscriber_email: &String) -> Uuid {
+        let subscriber = sqlx::query!(
+            "SELECT id FROM subscriptions WHERE name = $1 AND email = $2", 
+            subscriber_name, 
+            subscriber_email
+            )
             .fetch_one(&self.pool)
             .await
             .expect("Failed to fetch saved subscription");
 
-        (subscription.email, subscription.name)
+        subscriber.id
+    }
+
+    pub async fn get_subscription_token(&self, subscriber_id: Uuid) -> String {
+        let subscription_token = sqlx::query!(
+            "SELECT subscription_token FROM subscription_tokens WHERE subscriber_id = $1", subscriber_id)
+            .fetch_one(&self.pool)
+            .await
+            .expect("Failed to fetch subscription token");
+
+        subscription_token.subscription_token
     }
 
     pub async fn post_subscriptions(
@@ -63,7 +70,7 @@ impl<'a> TestApp<'a> {
 
         if let Some(message) = sent_messages.get(0) {
             let message_formatted = message.formatted();
-            let message_body = std::str::from_utf8(&message_formatted).unwrap();
+            let message_body = std::str::from_utf8(&message_formatted).unwrap();            
             message_body.contains(substr)
         } else {
             panic!("Message not sent");
