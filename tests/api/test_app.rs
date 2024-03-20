@@ -67,6 +67,14 @@ impl<'a> TestApp<'a> {
             .await
     }
 
+    pub async fn confirm_subscription(&self) -> Result<Response, reqwest::Error> {
+        let client = reqwest::Client::new();
+        client
+            .get(&format!("{}/confirm?token={}", self.address(), "12345efg"))
+            .send()
+            .await
+    }
+
     pub fn get_emails_sent(&self) -> usize {
         self.mock_email_sender.sent_messages.lock().unwrap().len()
     }
