@@ -9,7 +9,7 @@ use std::{fmt::Debug, marker::PhantomData, net::TcpListener, sync::Mutex};
 use actix_web::{dev::Server, middleware::Logger, web, App, HttpServer};
 use sqlx::{Pool, Postgres};
 
-use crate::routes::{health_check, subscribe};
+use crate::routes::{confirm, health_check, subscribe};
 
 pub struct Application<T> {
     port: u16,
@@ -55,6 +55,7 @@ where
                 .wrap(Logger::default())
                 .route("/health_check", web::get().to(health_check))
                 .route("/subscriptions", web::post().to(subscribe::<T>))
+                .route("/confirm", web::get().to(confirm))
                 .app_data(pool)
                 .app_data(email_service)
         })
