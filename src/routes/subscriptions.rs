@@ -67,7 +67,7 @@ pub async fn subscribe<'a, T: EmailSender + Debug>(
             info!("New subscriber details has been saved");
 
             println!("sub_record.id {}", sub_record.id);
-            
+
             let subscription_token = Uuid::new_v4().to_string();
             println!("new token {}", subscription_token);
             let result = sqlx::query!(
@@ -76,7 +76,7 @@ pub async fn subscribe<'a, T: EmailSender + Debug>(
                 VALUES ($1, $2)
                 "#,
                 subscription_token,
-                sub_record.id                
+                sub_record.id
             )
             .execute(pool.get_ref())
             .instrument(tracing::info_span!("add subscription token query"))
@@ -84,7 +84,11 @@ pub async fn subscribe<'a, T: EmailSender + Debug>(
 
             match result {
                 Ok(_) => {
-                    match send_confirmation_email(&sub_record.email, &subscription_token, email_service) {
+                    match send_confirmation_email(
+                        &sub_record.email,
+                        &subscription_token,
+                        email_service,
+                    ) {
                         Ok(_) => {
                             info!("Email sent");
                             HttpResponse::Ok().finish()
@@ -94,7 +98,7 @@ pub async fn subscribe<'a, T: EmailSender + Debug>(
                             HttpResponse::InternalServerError().finish()
                         }
                     }
-                },
+                }
                 Err(e) => {
                     error!("Failed to insert subscription token query: {:?}", e);
                     println!("{}", e);
@@ -112,13 +116,13 @@ pub async fn subscribe<'a, T: EmailSender + Debug>(
 #[derive(Template)]
 #[template(path = "confirmation/email.html")]
 struct ConfirmationEmailHtmlTemplate<'a> {
-    token: &'a str
+    token: &'a str,
 }
 
 #[derive(Template)]
 #[template(path = "confirmation/email.txt")]
 struct ConfirmationEmailTxtTemplate<'a> {
-    token: &'a str
+    token: &'a str,
 }
 
 #[derive(Template)]
@@ -131,12 +135,8 @@ fn send_confirmation_email<T: EmailSender>(
     email_service: web::Data<Mutex<EmailService<'_, T>>>,
 ) -> Result<()> {
     println!("token string passed into send_confirmation_email {}", token);
-    let confirm_email_html = ConfirmationEmailHtmlTemplate {
-        token
-    };
-    let confirm_email_plaintext = ConfirmationEmailTxtTemplate {
-        token
-    };
+    let confirm_email_html = ConfirmationEmailHtmlTemplate { token };
+    let confirm_email_plaintext = ConfirmationEmailTxtTemplate { token };
     let confirm_subject = ConfirmationEmailSubject {};
 
     let email = Email {

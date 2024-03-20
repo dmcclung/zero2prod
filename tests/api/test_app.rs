@@ -20,27 +20,33 @@ pub struct TestApp<'a> {
 impl<'a> TestApp<'a> {
     pub fn address(&self) -> &str {
         &self.address
-    }    
+    }
 
-    pub async fn get_subscription(&self, subscriber_name: &String, subscriber_email: &String) -> Uuid {
+    pub async fn get_subscription(
+        &self,
+        subscriber_name: &String,
+        subscriber_email: &String,
+    ) -> Uuid {
         let subscriber = sqlx::query!(
-            "SELECT id FROM subscriptions WHERE name = $1 AND email = $2", 
-            subscriber_name, 
+            "SELECT id FROM subscriptions WHERE name = $1 AND email = $2",
+            subscriber_name,
             subscriber_email
-            )
-            .fetch_one(&self.pool)
-            .await
-            .expect("Failed to fetch saved subscription");
+        )
+        .fetch_one(&self.pool)
+        .await
+        .expect("Failed to fetch saved subscription");
 
         subscriber.id
     }
 
     pub async fn get_subscription_token(&self, subscriber_id: Uuid) -> String {
         let subscription_token = sqlx::query!(
-            "SELECT subscription_token FROM subscription_tokens WHERE subscriber_id = $1", subscriber_id)
-            .fetch_one(&self.pool)
-            .await
-            .expect("Failed to fetch subscription token");
+            "SELECT subscription_token FROM subscription_tokens WHERE subscriber_id = $1",
+            subscriber_id
+        )
+        .fetch_one(&self.pool)
+        .await
+        .expect("Failed to fetch subscription token");
 
         subscription_token.subscription_token
     }
@@ -70,7 +76,7 @@ impl<'a> TestApp<'a> {
 
         if let Some(message) = sent_messages.get(0) {
             let message_formatted = message.formatted();
-            let message_body = std::str::from_utf8(&message_formatted).unwrap();            
+            let message_body = std::str::from_utf8(&message_formatted).unwrap();
             message_body.contains(substr)
         } else {
             panic!("Message not sent");

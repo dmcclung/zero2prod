@@ -1,8 +1,7 @@
+mod confirm;
 mod health_check;
 mod subscriptions;
-mod confirm;
 
+pub use confirm::*;
 pub use health_check::*;
 pub use subscriptions::*;
-pub use confirm::*;
-
