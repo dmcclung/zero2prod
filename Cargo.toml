@@ -18,7 +18,7 @@ name = "zero2prod"
 
 [dev-dependencies]
 claims = "0.7.1"
-fake = "2.9.2"
+fake = { version = "2.9.2", features = ["uuid"] }
 quickcheck = "1.0.3"
 quickcheck_macros = "1.0.0"
 reqwest = "^0.11"
