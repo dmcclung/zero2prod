@@ -67,10 +67,10 @@ impl<'a> TestApp<'a> {
             .await
     }
 
-    pub async fn confirm_subscription(&self) -> Result<Response, reqwest::Error> {
+    pub async fn confirm_subscription(&self, token: &str) -> Result<Response, reqwest::Error> {
         let client = reqwest::Client::new();
         client
-            .get(&format!("{}/confirm?token={}", self.address(), "12345efg"))
+            .get(&format!("{}/confirm?token={}", self.address(), token))
             .send()
             .await
     }
