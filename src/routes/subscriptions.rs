@@ -50,7 +50,7 @@ pub async fn subscribe<'a, T: EmailSender + Debug>(
     let result = sqlx::query!(
         r#"
         INSERT INTO subscriptions (id, email, name, subscribed_at, status)
-        VALUES ($1, $2, $3, $4, 'confirmed')
+        VALUES ($1, $2, $3, $4, 'pending')
         RETURNING id, email, name, subscribed_at, status
         "#,
         Uuid::new_v4(),
