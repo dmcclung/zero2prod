@@ -38,17 +38,51 @@ pub async fn confirm(
 
     match result {
         Ok(record) => {
-            info!("Subscription confirmed {}", record.subscriber_id);
-            // TODO: if token is in the database, look up user and set status to confirm
+            info!("Subscription confirmed {}", record.subscription_token);
+            let result = sqlx::query!(
+                r#"
+                UPDATE subscriptions SET status = 'confirmed' WHERE id = $1
+                "#,
+                record.subscriber_id
+            )
+            .execute(pool.get_ref())
+            .instrument(tracing::info_span!("set subscription to confirmed"))
+            .await;
 
-            // TODO: delete token from db
+            match result {
+                Ok(_) => {
+                    info!("Updated subscription to confirmed");
+                    let result = sqlx::query!(
+                        r#"
+                        DELETE FROM subscription_tokens
+                        WHERE subscription_token = $1
+                        "#,
+                        info.token
+                    )
+                    .execute(pool.get_ref())
+                    .instrument(tracing::info_span!("delete subscription token"))
+                    .await;
+
+                    match result {
+                        Ok(_) => {
+                            info!("Deleted subscription token {}", info.token);
+                            HttpResponse::Ok().finish()
+                        }
+                        Err(e) => {
+                            error!("Error deleting subscription token {}", e);
+                            HttpResponse::InternalServerError().finish()
+                        }
+                    }
+                }
+                Err(e) => {
+                    error!("Error updating subscription {}", e);
+                    HttpResponse::InternalServerError().finish()
+                }
+            }
         }
         Err(e) => {
             error!("Error fetching confirmation token {}", e);
-            // return HttpResponse::BadRequest if token not found
-            // return InternalServerError if something else
+            HttpResponse::BadRequest().finish()
         }
     }
-
-    HttpResponse::Ok().finish()
 }

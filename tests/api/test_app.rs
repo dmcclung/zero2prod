@@ -1,4 +1,4 @@
-//! tests/api/utils.rs
+//! tests/api/test_app.rs
 
 use anyhow::Result;
 use once_cell::sync::Lazy;
@@ -83,20 +83,14 @@ impl<'a> TestApp<'a> {
             .await
     }
 
-    pub fn get_emails_sent(&self) -> usize {
-        self.mock_email_sender.sent_messages.lock().unwrap().len()
-    }
-
     pub fn email_body_contains(&self, substr: &str) -> bool {
         let sent_messages = self.mock_email_sender.sent_messages.lock().unwrap();
 
-        if let Some(message) = sent_messages.get(0) {
+        sent_messages.iter().any(|message| {
             let message_formatted = message.formatted();
             let message_body = std::str::from_utf8(&message_formatted).unwrap();
             message_body.contains(substr)
-        } else {
-            panic!("Message not sent");
-        }
+        })
     }
 }
 

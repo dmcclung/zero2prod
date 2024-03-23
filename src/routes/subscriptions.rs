@@ -66,10 +66,8 @@ pub async fn subscribe<'a, T: EmailSender + Debug>(
         Ok(sub_record) => {
             info!("New subscriber details has been saved");
 
-            println!("sub_record.id {}", sub_record.id);
-
             let subscription_token = Uuid::new_v4().to_string();
-            println!("new token {}", subscription_token);
+
             let result = sqlx::query!(
                 r#"
                 INSERT INTO subscription_tokens (subscription_token, subscriber_id)
@@ -134,7 +132,6 @@ fn send_confirmation_email<T: EmailSender>(
     token: &str,
     email_service: web::Data<Mutex<EmailService<'_, T>>>,
 ) -> Result<()> {
-    println!("token string passed into send_confirmation_email {}", token);
     let confirm_email_html = ConfirmationEmailHtmlTemplate { token };
     let confirm_email_plaintext = ConfirmationEmailTxtTemplate { token };
     let confirm_subject = ConfirmationEmailSubject {};
