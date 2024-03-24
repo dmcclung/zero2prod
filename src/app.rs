@@ -1,30 +1,26 @@
 use crate::{
     config::Config,
-    email::{EmailSender, EmailService},
+    email::EmailService,
 };
 use anyhow::Result;
 use sqlx::postgres::PgPoolOptions;
-use std::{fmt::Debug, marker::PhantomData, net::TcpListener, sync::Mutex};
+use std::{net::TcpListener, sync::Arc};
 
 use actix_web::{dev::Server, middleware::Logger, web, App, HttpServer};
 use sqlx::{Pool, Postgres};
 
 use crate::routes::{confirm, health_check, subscribe};
 
-pub struct Application<T> {
+pub struct Application {
     port: u16,
     server: Server,
-    _marker: PhantomData<T>,
 }
 
-impl<T> Application<T>
-where
-    T: EmailSender + Debug + Send + Sync + 'static,
-{
+impl Application {
     pub async fn build(
         config: &Config,
         addr: String,
-        email_service: EmailService<'static, T>,
+        email_service: Arc<dyn EmailService + Send + Sync>
     ) -> Result<Self> {
         let pool = PgPoolOptions::new().connect(&config.db_config.url).await?;
         sqlx::migrate!().run(&pool).await?;
@@ -36,17 +32,16 @@ where
         Ok(Self {
             port,
             server,
-            _marker: PhantomData,
         })
     }
 
     fn run(
         listener: TcpListener,
         pool: Pool<Postgres>,
-        email_service: EmailService<'static, T>,
+        email_service: Arc<dyn EmailService + Send + Sync>
     ) -> Result<Server> {
         let pool = web::Data::new(pool);
-        let email_service = web::Data::new(Mutex::new(email_service));
+        let email_service = web::Data::new(email_service);
         let server = HttpServer::new(move || {
             let pool = pool.clone();
             let email_service = email_service.clone();
@@ -54,7 +49,7 @@ where
             App::new()
                 .wrap(Logger::default())
                 .route("/health_check", web::get().to(health_check))
-                .route("/subscriptions", web::post().to(subscribe::<T>))
+                .route("/subscriptions", web::post().to(subscribe))
                 .route("/confirm", web::get().to(confirm))
                 .app_data(pool)
                 .app_data(email_service)
