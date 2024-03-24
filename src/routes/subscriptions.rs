@@ -1,6 +1,6 @@
 use crate::{
     domain::subscriber::{NewSubscriber, SubscriberEmail, SubscriberError, SubscriberName},
-    email::{Email, EmailSender, EmailService},
+    email::{Email, EmailService},
 };
 use actix_web::{web, HttpResponse};
 use anyhow::Result;
@@ -8,8 +8,7 @@ use askama::Template;
 use chrono::Utc;
 use serde::Deserialize;
 use sqlx::{Pool, Postgres};
-use std::fmt::Debug;
-use std::sync::Mutex;
+use std::{fmt::Debug, sync::Arc};
 use tracing::{error, info, instrument, Instrument};
 use uuid::Uuid;
 
@@ -35,10 +34,10 @@ fn parse_subscriber(data: SubscriberFormData) -> Result<NewSubscriber, Subscribe
         subscriber_name = %data.name
     )
 )]
-pub async fn subscribe<'a, T: EmailSender + Debug>(
+pub async fn subscribe(
     data: web::Form<SubscriberFormData>,
     pool: web::Data<Pool<Postgres>>,
-    email_service: web::Data<Mutex<EmailService<'a, T>>>,
+    email_service: web::Data<Arc<dyn EmailService + Send + Sync>>,
 ) -> HttpResponse {
     info!("Adding a new subscriber");
 
@@ -127,11 +126,11 @@ struct ConfirmationEmailTxtTemplate<'a> {
 #[template(path = "confirmation/subject.txt")]
 struct ConfirmationEmailSubject {}
 
-fn send_confirmation_email<T: EmailSender>(
+fn send_confirmation_email(
     new_subscriber_email: &str,
     token: &str,
-    email_service: web::Data<Mutex<EmailService<'_, T>>>,
-) -> Result<()> {
+    email_service: web::Data<Arc<dyn EmailService + Send + Sync>>,
+) -> Result<(), String> {
     let confirm_email_html = ConfirmationEmailHtmlTemplate { token };
     let confirm_email_plaintext = ConfirmationEmailTxtTemplate { token };
     let confirm_subject = ConfirmationEmailSubject {};
@@ -144,5 +143,5 @@ fn send_confirmation_email<T: EmailSender>(
         plaintext: &confirm_email_plaintext.render().unwrap(),
         html: &confirm_email_html.render().unwrap(),
     };
-    email_service.lock().unwrap().send_email(email)
+    email_service.send(email)
 }
