@@ -1,60 +1,12 @@
 //! src/email.rs
 
-use std::env;
-
 use lettre::message::{Mailbox, MultiPart};
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::transport::smtp::client::{Tls, TlsParameters};
 use lettre::{Message, SmtpTransport, Transport};
 
-use anyhow::Result;
+use crate::config::SmtpConfig;
 
-use tracing::info;
-
-#[derive(Clone, Debug)]
-pub struct SmtpConfig {
-    host: String,
-    port: u16,
-    user: String,
-    password: String,
-    default_sender: String,
-}
-
-impl SmtpConfig {
-    pub fn new(
-        host: String,
-        port: String,
-        user: String,
-        password: String,
-        default_sender: String,
-    ) -> Self {
-        Self {
-            host,
-            port: port.parse::<u16>().unwrap(),
-            user,
-            password,
-            default_sender,
-        }
-    }
-
-    pub fn parse_from_env() -> Self {
-        dotenv::dotenv().ok();
-
-        let host = env::var("EMAIL_HOST").unwrap();
-        let port = env::var("EMAIL_PORT").unwrap();
-        let user = env::var("EMAIL_USER").unwrap();
-        let password = env::var("EMAIL_PASSWORD").unwrap();
-        let default_sender = env::var("EMAIL_DEFAULT_SENDER").unwrap();
-
-        Self {
-            host,
-            port: port.parse::<u16>().unwrap(),
-            user,
-            password,
-            default_sender,
-        }
-    }
-}
 
 /// Represents an email message.
 ///
@@ -79,7 +31,7 @@ impl SmtpConfig {
 ///     plaintext: "Hello\nHow are you?",
 /// };
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Email<'a> {
     /// The recipient's email address.
     pub to: &'a str,
@@ -98,56 +50,48 @@ pub struct Email<'a> {
     pub plaintext: &'a str,
 }
 
-pub trait EmailSender {
-    fn send(&self, port: u16, host: &str, creds: Credentials, message: Message) -> Result<()>;
+pub trait EmailService {
+    fn send(&self, email: Email) -> Result<(), String>;
 }
 
 #[derive(Debug)]
-pub struct LettreEmailSender;
+pub struct EmailServiceImpl {
+    config: SmtpConfig,
+    smtp_transport: SmtpTransport,
+}
 
-impl EmailSender for LettreEmailSender {
-    fn send(&self, port: u16, host: &str, creds: Credentials, message: Message) -> Result<()> {
-        let tls_parameters = TlsParameters::builder(host.into()).build().unwrap();
+impl EmailServiceImpl {
+    pub fn new(config: SmtpConfig) -> Self {
+        let tls_parameters = TlsParameters::builder(config.host.clone()).build().unwrap();
 
-        let mailer = SmtpTransport::relay(host)?
+        let creds = Credentials::new(config.user.clone(), config.password.clone());
+
+        let smtp_transport = SmtpTransport::relay(&config.host).unwrap()
             .tls(Tls::Required(tls_parameters))
-            .port(port)
+            .port(config.port)
             .credentials(creds)
             .build();
 
-        mailer
-            .send(&message)
-            .map(|_| info!("Email sent successfully"))
-            .map_err(|e| e.into())
-    }
-}
-
-#[derive(Debug)]
-pub struct EmailService<'a, T: EmailSender> {
-    config: SmtpConfig,
-    email_sender: &'a T,
-}
-
-impl<'a, T: EmailSender> EmailService<'a, T> {
-    pub fn new(config: SmtpConfig, email_sender: &'a T) -> Self {
         Self {
             config,
-            email_sender,
+            smtp_transport,
         }
     }
+}
 
-    pub fn send_email(&mut self, email: Email) -> Result<()> {
-        let to: Mailbox = email.to.parse()?;
+impl EmailService for EmailServiceImpl {
+    fn send(&self, email: Email) -> Result<(), String> {
+        let to: Mailbox = email.to.parse().map_err(|e| format!("Error: {}", e)).unwrap();
         let from: Mailbox = if email.from.is_empty() {
-            self.config.default_sender.parse()?
+            self.config.default_sender.parse().map_err(|e| format!("Error: {}", e)).unwrap()
         } else {
-            email.from.parse()?
+            email.from.parse().map_err(|e| format!("Error: {}", e)).unwrap()
         };
 
         let mut message_builder = Message::builder().from(from).to(to).subject(email.subject);
 
         if !email.reply_to.is_empty() {
-            let reply_to: Mailbox = email.reply_to.parse()?;
+            let reply_to: Mailbox = email.reply_to.parse().map_err(|e| format!("Error: {}", e)).unwrap();
 
             message_builder = message_builder.reply_to(reply_to);
         }
@@ -155,49 +99,46 @@ impl<'a, T: EmailSender> EmailService<'a, T> {
         let message = message_builder.multipart(MultiPart::alternative_plain_html(
             email.plaintext.to_string(),
             email.html.to_string(),
-        ))?;
+        )).map_err(|e| format!("Error: {}", e)).unwrap();
 
-        let creds = Credentials::new(self.config.user.clone(), self.config.password.clone());
-        self.email_sender
-            .send(self.config.port, &self.config.host, creds, message)
+        match self.smtp_transport.send(&message) {
+            Ok(_) => Ok(()),
+            Err(e) => Err(format!("Error sending email {}", e))
+        }
     }
 }
 
 pub mod mocks {
-    use anyhow::Result;
-    use lettre::Message;
-    use std::sync::{Arc, Mutex};
+    use std::sync::Mutex;
 
-    use super::EmailSender;
+    use super::{Email, EmailService};
 
     #[derive(Debug)]
-    pub struct MockEmailSender {
-        pub sent_messages: Arc<Mutex<Vec<Message>>>,
+    pub struct MockEmailService {
+        pub sent_messages: Mutex<Vec<(String, String, String)>>,
     }
 
-    impl Default for MockEmailSender {
+    impl Default for MockEmailService {
         fn default() -> Self {
             Self::new()
         }
     }
 
-    impl MockEmailSender {
+    impl MockEmailService {
         pub fn new() -> Self {
             Self {
-                sent_messages: Arc::new(Mutex::new(Vec::new())),
+                sent_messages: Mutex::new(Vec::new()),
             }
         }
     }
 
-    impl EmailSender for MockEmailSender {
+    impl EmailService for MockEmailService {
         fn send(
             &self,
-            _port: u16,
-            _host: &str,
-            _creds: lettre::transport::smtp::authentication::Credentials,
-            message: lettre::Message,
-        ) -> Result<()> {
-            self.sent_messages.lock().unwrap().push(message);
+            message: Email,
+        ) -> Result<(), String> {
+            
+            self.sent_messages.lock().unwrap().push((message.to.to_owned(), message.html.to_owned(), message.plaintext.to_owned()));
             Ok(())
         }
     }
@@ -213,7 +154,7 @@ mod tests {
 
     use std::env::{remove_var, set_var};
 
-    use crate::email::mocks::MockEmailSender;
+    use crate::email::mocks::MockEmailService;
 
     use super::{Email, EmailService, SmtpConfig};
 
@@ -254,14 +195,7 @@ mod tests {
 
     #[test]
     fn send_valid_email() {
-        let smtp_config = SmtpConfig::new(
-            generate_hostname(),
-            NumberWithFormat("###").fake(),
-            Username().fake(),
-            Password(8..16).fake(),
-            SafeEmail().fake(),
-        );
-        let email_sender = &MockEmailSender::new();
+        let email_service = &MockEmailService::new();
 
         let to: String = SafeEmail().fake();
         let from: String = SafeEmail().fake();
@@ -277,23 +211,14 @@ mod tests {
             plaintext: &plaintext,
         };
 
-        let mut email_service: EmailService<MockEmailSender> =
-            EmailService::new(smtp_config, email_sender);
-        let res = email_service.send_email(email);
-
+        let res = email_service.send(email);
         assert_ok!(res);
 
-        let sent_messages = email_sender.sent_messages.lock().unwrap();
+        let sent_messages = email_service.sent_messages.lock().unwrap();
         assert_eq!(1, sent_messages.len());
 
         if let Some(message) = sent_messages.get(0) {
-            let headers_string = message.headers().to_string();
-            let to_header = headers_string
-                .lines()
-                .find(|line| line.starts_with("To:"))
-                .map(|line| line.trim_start_matches("To:").trim())
-                .unwrap_or("");
-            assert_eq!(to, to_header);
+            assert_eq!(to, message.0);
         } else {
             panic!("Message not sent");
         }
