@@ -1,23 +1,23 @@
 //! tests/api/test_app.rs
 
+use std::sync::Arc;
+
 use anyhow::Result;
-use once_cell::sync::Lazy;
 use reqwest::Response;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Pool, Postgres};
 use uuid::Uuid;
 use zero2prod::app::Application;
 use zero2prod::config::Config;
-use zero2prod::email::mocks::MockEmailSender;
-use zero2prod::email::EmailService;
+use zero2prod::email::mocks::MockEmailService;
 
-pub struct TestApp<'a> {
+pub struct TestApp {
     address: String,
     pool: Pool<Postgres>,
-    mock_email_sender: &'a MockEmailSender,
+    email_service: Arc<MockEmailService>,
 }
 
-impl<'a> TestApp<'a> {
+impl TestApp {
     pub fn address(&self) -> &str {
         &self.address
     }
@@ -51,7 +51,7 @@ impl<'a> TestApp<'a> {
         subscription_token.subscription_token
     }
 
-    pub async fn post_subscriptions(
+    pub async fn create_subscription(
         &self,
         name: String,
         email: String,
@@ -83,24 +83,17 @@ impl<'a> TestApp<'a> {
             .await
     }
 
-    pub fn email_body_contains(&self, substr: &str) -> bool {
-        let sent_messages = self.mock_email_sender.sent_messages.lock().unwrap();
-
-        sent_messages.iter().any(|message| {
-            let message_formatted = message.formatted();
-            let message_body = std::str::from_utf8(&message_formatted).unwrap();
-            message_body.contains(substr)
-        })
+    pub fn get_sent_emails(&self) -> Vec<(String, String, String)> {
+        self.email_service.sent_messages.lock().unwrap().to_vec()
     }
 }
 
-pub async fn spawn() -> Result<TestApp<'static>> {
+pub async fn spawn() -> Result<TestApp> {
     let config = Config::new();
 
-    static EMAIL_SENDER: Lazy<MockEmailSender> = Lazy::new(|| MockEmailSender::new());
-    let email_service = EmailService::new(config.smtp_config.clone(), &*EMAIL_SENDER);
+    let email_service = Arc::new(MockEmailService::new());
 
-    let app = Application::build(&config, "127.0.0.1:0".into(), email_service).await?;
+    let app = Application::build(&config, "127.0.0.1:0".into(), email_service.clone()).await?;
     let address = format!("http://127.0.0.1:{}", app.port());
     let _ = tokio::spawn(app.run_until_stopped());
 
@@ -109,6 +102,6 @@ pub async fn spawn() -> Result<TestApp<'static>> {
     Ok(TestApp {
         address,
         pool,
-        mock_email_sender: &*EMAIL_SENDER,
+        email_service,
     })
 }
