@@ -9,7 +9,7 @@ async fn confirm_returns_200_with_valid_token() {
     let email: String = faker::internet::en::SafeEmail().fake();
 
     let response = test_app
-        .post_subscriptions(name.clone(), email.clone())
+        .create_subscription(name.clone(), email.clone())
         .await
         .expect("Failed to post subscription");
     assert_eq!(200, response.status().as_u16());
