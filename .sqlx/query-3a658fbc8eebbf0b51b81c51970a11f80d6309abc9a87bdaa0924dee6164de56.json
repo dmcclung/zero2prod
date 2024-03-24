@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        INSERT INTO subscriptions (id, email, name, subscribed_at, status)\n        VALUES ($1, $2, $3, $4, 'confirmed')\n        RETURNING id, email, name, subscribed_at, status\n        ",
+  "query": "\n        INSERT INTO subscriptions (id, email, name, subscribed_at, status)\n        VALUES ($1, $2, $3, $4, 'pending')\n        RETURNING id, email, name, subscribed_at, status\n        ",
   "describe": {
     "columns": [
       {
@@ -45,5 +45,5 @@
       false
     ]
   },
-  "hash": "342915217902d0fce61f39b1e7ac627d58d9ae2984e13b0b6e8108f802fcb8f7"
+  "hash": "3a658fbc8eebbf0b51b81c51970a11f80d6309abc9a87bdaa0924dee6164de56"
 }
