@@ -2,7 +2,6 @@
 
 use std::sync::Arc;
 
-use anyhow::Result;
 use reqwest::Response;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Pool, Postgres};
@@ -89,7 +88,7 @@ impl TestApp {
     }
 }
 
-pub async fn spawn() -> Result<TestApp> {
+pub async fn spawn() -> Result<TestApp, String> {
     let config = Config::new();
 
     let email_service = Arc::new(MockEmailService::new());
@@ -98,7 +97,10 @@ pub async fn spawn() -> Result<TestApp> {
     let address = format!("http://127.0.0.1:{}", app.port());
     let _ = tokio::spawn(app.run_until_stopped());
 
-    let pool = PgPoolOptions::new().connect(&config.db_config.url).await?;
+    let pool = PgPoolOptions::new()
+        .connect(&config.db_config.url)
+        .await
+        .map_err(|e| format!("Error connecting to db: {}", e))?;
 
     Ok(TestApp {
         address,

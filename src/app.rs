@@ -1,5 +1,4 @@
 use crate::{config::Config, email::EmailService};
-use anyhow::Result;
 use sqlx::postgres::PgPoolOptions;
 use std::{net::TcpListener, sync::Arc};
 
@@ -18,11 +17,18 @@ impl Application {
         config: &Config,
         addr: String,
         email_service: Arc<dyn EmailService + Send + Sync>,
-    ) -> Result<Self> {
-        let pool = PgPoolOptions::new().connect(&config.db_config.url).await?;
-        sqlx::migrate!().run(&pool).await?;
+    ) -> Result<Self, String> {
+        let pool = PgPoolOptions::new()
+            .connect(&config.db_config.url)
+            .await
+            .map_err(|e| format!("Error connecting to DB: {}", e))?;
+        sqlx::migrate!()
+            .run(&pool)
+            .await
+            .map_err(|e| format!("Error migrating db {}", e))?;
 
-        let listener = TcpListener::bind(addr)?;
+        let listener =
+            TcpListener::bind(addr.clone()).map_err(|e| format!("Error binding {} {}", addr, e))?;
         let port = listener.local_addr().unwrap().port();
         let server = Self::run(listener, pool, email_service)?;
 
@@ -33,7 +39,7 @@ impl Application {
         listener: TcpListener,
         pool: Pool<Postgres>,
         email_service: Arc<dyn EmailService + Send + Sync>,
-    ) -> Result<Server> {
+    ) -> Result<Server, String> {
         let pool = web::Data::new(pool);
         let email_service = web::Data::new(email_service);
         let server = HttpServer::new(move || {
@@ -48,7 +54,8 @@ impl Application {
                 .app_data(pool)
                 .app_data(email_service)
         })
-        .listen(listener)?
+        .listen(listener)
+        .map_err(|e| format!("Error listening {}", e))?
         .run();
         Ok(server)
     }

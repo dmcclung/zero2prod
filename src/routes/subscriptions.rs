@@ -3,7 +3,6 @@ use crate::{
     email::{Email, EmailService},
 };
 use actix_web::{web, HttpResponse};
-use anyhow::Result;
 use askama::Template;
 use chrono::Utc;
 use serde::Deserialize;
