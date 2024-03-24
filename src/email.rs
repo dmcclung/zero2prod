@@ -7,7 +7,6 @@ use lettre::{Message, SmtpTransport, Transport};
 
 use crate::config::SmtpConfig;
 
-
 /// Represents an email message.
 ///
 /// This struct includes all the common fields required to construct an email,
@@ -66,7 +65,8 @@ impl EmailServiceImpl {
 
         let creds = Credentials::new(config.user.clone(), config.password.clone());
 
-        let smtp_transport = SmtpTransport::relay(&config.host).unwrap()
+        let smtp_transport = SmtpTransport::relay(&config.host)
+            .unwrap()
             .tls(Tls::Required(tls_parameters))
             .port(config.port)
             .credentials(creds)
@@ -81,29 +81,48 @@ impl EmailServiceImpl {
 
 impl EmailService for EmailServiceImpl {
     fn send(&self, email: Email) -> Result<(), String> {
-        let to: Mailbox = email.to.parse().map_err(|e| format!("Error: {}", e)).unwrap();
+        let to: Mailbox = email
+            .to
+            .parse()
+            .map_err(|e| format!("Error: {}", e))
+            .unwrap();
         let from: Mailbox = if email.from.is_empty() {
-            self.config.default_sender.parse().map_err(|e| format!("Error: {}", e)).unwrap()
+            self.config
+                .default_sender
+                .parse()
+                .map_err(|e| format!("Error: {}", e))
+                .unwrap()
         } else {
-            email.from.parse().map_err(|e| format!("Error: {}", e)).unwrap()
+            email
+                .from
+                .parse()
+                .map_err(|e| format!("Error: {}", e))
+                .unwrap()
         };
 
         let mut message_builder = Message::builder().from(from).to(to).subject(email.subject);
 
         if !email.reply_to.is_empty() {
-            let reply_to: Mailbox = email.reply_to.parse().map_err(|e| format!("Error: {}", e)).unwrap();
+            let reply_to: Mailbox = email
+                .reply_to
+                .parse()
+                .map_err(|e| format!("Error: {}", e))
+                .unwrap();
 
             message_builder = message_builder.reply_to(reply_to);
         }
 
-        let message = message_builder.multipart(MultiPart::alternative_plain_html(
-            email.plaintext.to_string(),
-            email.html.to_string(),
-        )).map_err(|e| format!("Error: {}", e)).unwrap();
+        let message = message_builder
+            .multipart(MultiPart::alternative_plain_html(
+                email.plaintext.to_string(),
+                email.html.to_string(),
+            ))
+            .map_err(|e| format!("Error: {}", e))
+            .unwrap();
 
         match self.smtp_transport.send(&message) {
             Ok(_) => Ok(()),
-            Err(e) => Err(format!("Error sending email {}", e))
+            Err(e) => Err(format!("Error sending email {}", e)),
         }
     }
 }
@@ -133,12 +152,12 @@ pub mod mocks {
     }
 
     impl EmailService for MockEmailService {
-        fn send(
-            &self,
-            message: Email,
-        ) -> Result<(), String> {
-            
-            self.sent_messages.lock().unwrap().push((message.to.to_owned(), message.html.to_owned(), message.plaintext.to_owned()));
+        fn send(&self, message: Email) -> Result<(), String> {
+            self.sent_messages.lock().unwrap().push((
+                message.to.to_owned(),
+                message.html.to_owned(),
+                message.plaintext.to_owned(),
+            ));
             Ok(())
         }
     }

@@ -19,14 +19,15 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
     let subscriber_id = test_app.get_subscription(&name, &email).await;
     let subscription_token = test_app.get_subscription_token(subscriber_id).await;
 
-    let expected_confirmation_link = &format!(
-        "https://zero2prod.xyz/confirm?token={}",
-        subscription_token
-    );
+    let expected_confirmation_link =
+        &format!("https://zero2prod.xyz/confirm?token={}", subscription_token);
 
     let sent_messages = test_app.get_sent_emails();
     assert_eq!(sent_messages.len(), 1);
-    assert_eq!(sent_messages[0].1.contains(expected_confirmation_link), true);
+    assert_eq!(
+        sent_messages[0].1.contains(expected_confirmation_link),
+        true
+    );
 }
 
 #[tokio::test]
