@@ -2,10 +2,52 @@
 
 use std::env;
 
-use crate::email::SmtpConfig;
+#[derive(Clone, Debug)]
+pub struct SmtpConfig {
+    pub host: String,
+    pub port: u16,
+    pub user: String,
+    pub password: String,
+    pub default_sender: String,
+}
 
-#[derive(serde::Deserialize)]
+impl SmtpConfig {
+    pub fn new(
+        host: String,
+        port: String,
+        user: String,
+        password: String,
+        default_sender: String,
+    ) -> Self {
+        Self {
+            host,
+            port: port.parse::<u16>().unwrap(),
+            user,
+            password,
+            default_sender,
+        }
+    }
 
+    pub fn parse_from_env() -> Self {
+        dotenv::dotenv().ok();
+
+        let host = env::var("EMAIL_HOST").unwrap();
+        let port = env::var("EMAIL_PORT").unwrap();
+        let user = env::var("EMAIL_USER").unwrap();
+        let password = env::var("EMAIL_PASSWORD").unwrap();
+        let default_sender = env::var("EMAIL_DEFAULT_SENDER").unwrap();
+
+        Self {
+            host,
+            port: port.parse::<u16>().unwrap(),
+            user,
+            password,
+            default_sender,
+        }
+    }
+}
+
+// #[derive(serde::Deserialize)]
 pub struct DatabaseConfig {
     pub url: String,
 }
