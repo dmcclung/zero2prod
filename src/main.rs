@@ -1,8 +1,10 @@
+use std::sync::Arc;
+
 use anyhow::Result;
 use zero2prod::config::Config;
 
 use zero2prod::app::Application;
-use zero2prod::email::{EmailService, LettreEmailSender};
+use zero2prod::email::EmailServiceImpl;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -11,9 +13,7 @@ async fn main() -> Result<()> {
     let config = Config::new();
     let addr = format!("[::]:{}", config.port);
 
-    static EMAIL_SENDER: LettreEmailSender = LettreEmailSender {};
-
-    let email_service = EmailService::new(config.smtp_config.clone(), &EMAIL_SENDER);
+    let email_service = Arc::new(EmailServiceImpl::new(config.smtp_config.clone()));
 
     let app = Application::build(&config, addr, email_service).await?;
     app.run_until_stopped().await?;
