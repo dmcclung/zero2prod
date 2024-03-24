@@ -10,7 +10,7 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
     let email: String = faker::internet::en::SafeEmail().fake();
 
     let response = test_app
-        .post_subscriptions(name.clone(), email.clone())
+        .create_subscription(name.clone(), email.clone())
         .await
         .expect("Failed to execute request.");
 
@@ -19,13 +19,14 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
     let subscriber_id = test_app.get_subscription(&name, &email).await;
     let subscription_token = test_app.get_subscription_token(subscriber_id).await;
 
-    assert_eq!(
-        test_app.email_body_contains(&format!(
-            "https://zero2prod.xyz/con=\r\nfirm?token=3D{}",
-            subscription_token
-        )),
-        true
+    let expected_confirmation_link = &format!(
+        "https://zero2prod.xyz/confirm?token={}",
+        subscription_token
     );
+
+    let sent_messages = test_app.get_sent_emails();
+    assert_eq!(sent_messages.len(), 1);
+    assert_eq!(sent_messages[0].1.contains(expected_confirmation_link), true);
 }
 
 #[tokio::test]
@@ -63,7 +64,7 @@ async fn subscribe_returns_a_400_when_data_is_missing() {
 
     for test_case in test_cases {
         let response = test_app
-            .post_subscriptions(test_case.name.into(), test_case.email.into())
+            .create_subscription(test_case.name.into(), test_case.email.into())
             .await
             .expect("Failed to execute request.");
 
