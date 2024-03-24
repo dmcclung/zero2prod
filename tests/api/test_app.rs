@@ -9,7 +9,8 @@ use sqlx::{Pool, Postgres};
 use uuid::Uuid;
 use zero2prod::app::Application;
 use zero2prod::config::Config;
-use zero2prod::email::mocks::MockEmailService;
+
+use crate::mocks::MockEmailService;
 
 pub struct TestApp {
     address: String,
