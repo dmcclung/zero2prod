@@ -37,12 +37,12 @@ pub async fn subscribe(
     data: web::Form<SubscriberFormData>,
     pool: web::Data<Pool<Postgres>>,
     email_service: web::Data<Arc<dyn EmailService + Send + Sync>>,
-) -> HttpResponse {
+) -> Result<HttpResponse, actix_web::Error> {
     info!("Adding a new subscriber");
 
     let new_subscriber = match parse_subscriber(data.0) {
         Ok(new_subscriber) => new_subscriber,
-        Err(_) => return HttpResponse::BadRequest().finish(),
+        Err(e) => return Err(actix_web::error::ErrorBadRequest(e)),
     };
 
     let result = sqlx::query!(
@@ -87,24 +87,23 @@ pub async fn subscribe(
                     ) {
                         Ok(_) => {
                             info!("Email sent");
-                            HttpResponse::Ok().finish()
+                            Ok(HttpResponse::Ok().finish())
                         }
                         Err(e) => {
                             error!("Failed to send email: {:?}", e);
-                            HttpResponse::InternalServerError().finish()
+                            Err(actix_web::error::ErrorInternalServerError(e))
                         }
                     }
                 }
                 Err(e) => {
                     error!("Failed to insert subscription token query: {:?}", e);
-                    println!("{}", e);
-                    HttpResponse::InternalServerError().finish()
+                    Err(actix_web::error::ErrorInternalServerError(e))
                 }
             }
         }
         Err(e) => {
-            error!("Failed to execute query: {:?}", e);
-            HttpResponse::InternalServerError().finish()
+            error!("Failed to insert subscription: {:?}", e);
+            Err(actix_web::error::ErrorInternalServerError(e))
         }
     }
 }
