@@ -39,7 +39,7 @@ pub async fn subscribe(
     email_service: web::Data<Arc<dyn EmailService + Send + Sync>>,
 ) -> Result<HttpResponse, actix_web::Error> {
     info!("Adding a new subscriber");
-    
+
     let new_subscriber = parse_subscriber(data.0)?;
 
     let result = sqlx::query!(
