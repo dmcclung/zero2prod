@@ -1,6 +1,9 @@
 use crate::{
     domain::subscriber::{NewSubscriber, SubscriberEmail, SubscriberError, SubscriberName},
     email::{Email, EmailService},
+    templates::{
+        ConfirmationEmailHtmlTemplate, ConfirmationEmailSubject, ConfirmationEmailTxtTemplate,
+    },
 };
 use actix_web::{web, HttpResponse};
 use askama::Template;
@@ -104,22 +107,6 @@ pub async fn subscribe(
         }
     }
 }
-
-#[derive(Template)]
-#[template(path = "confirmation/email.html")]
-struct ConfirmationEmailHtmlTemplate<'a> {
-    token: &'a str,
-}
-
-#[derive(Template)]
-#[template(path = "confirmation/email.txt")]
-struct ConfirmationEmailTxtTemplate<'a> {
-    token: &'a str,
-}
-
-#[derive(Template)]
-#[template(path = "confirmation/subject.txt")]
-struct ConfirmationEmailSubject {}
 
 fn send_confirmation_email(
     new_subscriber_email: &str,
