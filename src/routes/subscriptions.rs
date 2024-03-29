@@ -66,7 +66,7 @@ pub async fn subscribe(
 
             let subscription_token = Uuid::new_v4().to_string();
 
-            let result = sqlx::query!(
+            sqlx::query!(
                 r#"
                 INSERT INTO subscription_tokens (subscription_token, subscriber_id)
                 VALUES ($1, $2)
@@ -76,30 +76,14 @@ pub async fn subscribe(
             )
             .execute(pool.get_ref())
             .instrument(tracing::info_span!("add subscription token query"))
-            .await;
+            .await
+            .map_err(SubscriberError::DatabaseError)?;
 
-            match result {
-                Ok(_) => {
-                    match send_confirmation_email(
-                        &sub_record.email,
-                        &subscription_token,
-                        email_service,
-                    ) {
-                        Ok(_) => {
-                            info!("Email sent");
-                            Ok(HttpResponse::Ok().finish())
-                        }
-                        Err(e) => {
-                            error!("Failed to send email: {:?}", e);
-                            Err(actix_web::error::ErrorInternalServerError(e))
-                        }
-                    }
-                }
-                Err(e) => {
-                    error!("Failed to insert subscription token query: {:?}", e);
-                    Err(actix_web::error::ErrorInternalServerError(e))
-                }
-            }
+            send_confirmation_email(&sub_record.email, &subscription_token, email_service)
+                .map_err(SubscriberError::EmailError)?;
+
+            info!("Email sent");
+            Ok(HttpResponse::Ok().finish())
         }
         Err(e) => {
             error!("Failed to insert subscription: {:?}", e);
