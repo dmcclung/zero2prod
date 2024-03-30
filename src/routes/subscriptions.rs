@@ -11,7 +11,7 @@ use chrono::Utc;
 use serde::Deserialize;
 use sqlx::{Pool, Postgres};
 use std::{fmt::Debug, sync::Arc};
-use tracing::{error, info, instrument, Instrument};
+use tracing::{info, instrument, Instrument};
 use uuid::Uuid;
 
 #[derive(Deserialize)]
@@ -45,7 +45,7 @@ pub async fn subscribe(
 
     let new_subscriber = parse_subscriber(data.0)?;
 
-    let result = sqlx::query!(
+    let subscription_record = sqlx::query!(
         r#"
         INSERT INTO subscriptions (id, email, name, subscribed_at, status)
         VALUES ($1, $2, $3, $4, 'pending')
@@ -58,38 +58,35 @@ pub async fn subscribe(
     )
     .fetch_one(pool.get_ref())
     .instrument(tracing::info_span!("add subscriber query"))
-    .await;
+    .await
+    .map_err(SubscriberError::DatabaseError)?;
 
-    match result {
-        Ok(sub_record) => {
-            info!("New subscriber details has been saved");
+    info!("New subscriber details has been saved");
 
-            let subscription_token = Uuid::new_v4().to_string();
+    let subscription_token = Uuid::new_v4().to_string();
 
-            sqlx::query!(
-                r#"
-                INSERT INTO subscription_tokens (subscription_token, subscriber_id)
-                VALUES ($1, $2)
-                "#,
-                subscription_token,
-                sub_record.id
-            )
-            .execute(pool.get_ref())
-            .instrument(tracing::info_span!("add subscription token query"))
-            .await
-            .map_err(SubscriberError::DatabaseError)?;
+    sqlx::query!(
+        r#"
+        INSERT INTO subscription_tokens (subscription_token, subscriber_id)
+        VALUES ($1, $2)
+        "#,
+        subscription_token,
+        subscription_record.id
+    )
+    .execute(pool.get_ref())
+    .instrument(tracing::info_span!("add subscription token query"))
+    .await
+    .map_err(SubscriberError::DatabaseError)?;
 
-            send_confirmation_email(&sub_record.email, &subscription_token, email_service)
-                .map_err(SubscriberError::EmailError)?;
+    send_confirmation_email(
+        &subscription_record.email,
+        &subscription_token,
+        email_service,
+    )
+    .map_err(SubscriberError::EmailError)?;
 
-            info!("Email sent");
-            Ok(HttpResponse::Ok().finish())
-        }
-        Err(e) => {
-            error!("Failed to insert subscription: {:?}", e);
-            Err(actix_web::error::ErrorInternalServerError(e))
-        }
-    }
+    info!("Email sent");
+    Ok(HttpResponse::Ok().finish())
 }
 
 fn send_confirmation_email(
