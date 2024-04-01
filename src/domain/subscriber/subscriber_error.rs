@@ -24,8 +24,8 @@ impl ResponseError for SubscriberError {
     fn error_response(&self) -> HttpResponse {
         match self {
             SubscriberError::ParseError(ref message) => HttpResponse::BadRequest().json(message),
-            SubscriberError::DatabaseError(ref _error) => {
-                HttpResponse::InternalServerError().finish()
+            SubscriberError::DatabaseError(ref error) => {
+                HttpResponse::InternalServerError().json(error.to_string())
             }
             SubscriberError::EmailError(ref message) => {
                 HttpResponse::InternalServerError().json(message)
