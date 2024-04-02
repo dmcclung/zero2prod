@@ -75,6 +75,15 @@ impl TestApp {
             .await
     }
 
+    pub async fn publish_newsletter(&self) -> Result<Response, reqwest::Error> {
+        let client = reqwest::Client::new();
+        client
+            .post(&format!("{}/newsletter", self.address()))
+            .body("")
+            .send()
+            .await
+    }
+
     pub async fn confirm_subscription_no_token(&self) -> Result<Response, reqwest::Error> {
         let client = reqwest::Client::new();
         client
