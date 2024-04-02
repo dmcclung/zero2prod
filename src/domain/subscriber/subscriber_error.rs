@@ -8,6 +8,7 @@ pub enum SubscriberError {
     ParseError(String),
     DatabaseError(sqlx::Error),
     EmailError(String),
+    InvalidToken(String),
 }
 
 impl Display for SubscriberError {
@@ -16,6 +17,7 @@ impl Display for SubscriberError {
             SubscriberError::ParseError(e) => write!(f, "Parse Error: {}", e),
             SubscriberError::DatabaseError(e) => write!(f, "Database Error: {}", e),
             SubscriberError::EmailError(e) => write!(f, "Error sending email: {}", e),
+            SubscriberError::InvalidToken(e) => write!(f, "Invalid token: {}", e),
         }
     }
 }
@@ -29,6 +31,9 @@ impl ResponseError for SubscriberError {
             }
             SubscriberError::EmailError(ref message) => {
                 HttpResponse::InternalServerError().json(message)
+            }
+            SubscriberError::InvalidToken(ref token) => {
+                HttpResponse::BadRequest().json(format!("Invalid token: {}", token))
             }
         }
     }
