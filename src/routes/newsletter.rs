@@ -5,13 +5,13 @@ use serde::Deserialize;
 use tracing::info;
 
 #[derive(Deserialize)]
-pub struct NewsletterFormData {
+pub struct NewsletterJson {
     pub newsletter: String,
 }
 
 pub async fn publish_newsletter(
-    data: web::Form<NewsletterFormData>,
+    json: web::Json<NewsletterJson>,
 ) -> HttpResponse {
-    info!("{}", data.newsletter);
+    info!("{}", json.0.newsletter);
     HttpResponse::Ok().finish()
 }

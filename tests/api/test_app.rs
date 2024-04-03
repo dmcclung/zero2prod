@@ -8,6 +8,7 @@ use sqlx::{Pool, Postgres};
 use uuid::Uuid;
 use zero2prod::app::Application;
 use zero2prod::config::Config;
+use serde_json;
 
 use crate::mocks::MockEmailService;
 
@@ -76,10 +77,14 @@ impl TestApp {
     }
 
     pub async fn publish_newsletter(&self, newsletter: String) -> Result<Response, reqwest::Error> {
+        let body = serde_json::json!({
+            "newsletter": newsletter,
+        });
         let client = reqwest::Client::new();
         client
             .post(&format!("{}/newsletter", self.address()))
-            .body(format!("newsletter={}", newsletter))
+            .header("Content-Type", "application/json")
+            .body(body.to_string())
             .send()
             .await
     }
