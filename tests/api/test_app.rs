@@ -75,11 +75,11 @@ impl TestApp {
             .await
     }
 
-    pub async fn publish_newsletter(&self) -> Result<Response, reqwest::Error> {
+    pub async fn publish_newsletter(&self, newsletter: String) -> Result<Response, reqwest::Error> {
         let client = reqwest::Client::new();
         client
             .post(&format!("{}/newsletter", self.address()))
-            .body("")
+            .body(format!("newsletter={}", newsletter))
             .send()
             .await
     }
