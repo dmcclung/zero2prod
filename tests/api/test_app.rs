@@ -3,12 +3,12 @@
 use std::sync::Arc;
 
 use reqwest::Response;
+use serde_json;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Pool, Postgres};
 use uuid::Uuid;
 use zero2prod::app::Application;
 use zero2prod::config::Config;
-use serde_json;
 
 use crate::mocks::MockEmailService;
 

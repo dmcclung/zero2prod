@@ -1,8 +1,8 @@
 //! tests/api/newsletter.rs
 
 use crate::test_app::spawn;
-use fake::Fake;
 use fake::faker::lorem::en::Paragraph;
+use fake::Fake;
 
 #[tokio::test]
 async fn publish_newsletter_returns_200() {
