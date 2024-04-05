@@ -8,7 +8,7 @@ use sqlx::{Pool, Postgres};
 use tracing::{info, instrument, Instrument};
 use uuid::Uuid;
 
-use crate::{domain::subscriber::SubscriberError, email::EmailService};
+use crate::{domain::subscriber::SubscriberError, email::{EmailService, Email}};
 
 #[derive(Deserialize)]
 pub struct NewsletterJson {
@@ -26,7 +26,6 @@ pub async fn publish_newsletter(
     pool: web::Data<Pool<Postgres>>,
     email_service: web::Data<Arc<dyn EmailService + Send + Sync>>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    info!("{}", json.0.newsletter);
     let confirmed_emails = sqlx::query!(
         r#"
         SELECT email
@@ -41,6 +40,15 @@ pub async fn publish_newsletter(
 
     info!("Confirmed email addresses: {}", confirmed_emails.len());
 
-    // send them an email
+    let email = Email {
+        to: "",
+        html: "", 
+        from: "", 
+        subject: "", 
+        reply_to: "", 
+        plaintext: &json.newsletter 
+    };
+
+    email_service.send(email)?;
     Ok(HttpResponse::Ok().finish())
 }
