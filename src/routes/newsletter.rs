@@ -10,9 +10,11 @@ use uuid::Uuid;
 
 use crate::{domain::subscriber::SubscriberError, email::{EmailService, Email}};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct NewsletterJson {
-    pub newsletter: String,
+    pub html: String,
+    pub plaintext: String,
+    pub subject: String
 }
 
 #[instrument(
@@ -40,15 +42,18 @@ pub async fn publish_newsletter(
 
     info!("Confirmed email addresses: {}", confirmed_emails.len());
 
-    let email = Email {
-        to: "",
-        html: "", 
-        from: "", 
-        subject: "", 
-        reply_to: "", 
-        plaintext: &json.newsletter 
-    };
-
-    email_service.send(email)?;
+    for confirmed_email in confirmed_emails {
+        let email = Email {
+            to: &confirmed_email.email,
+            html: &json.html, 
+            from: "", 
+            subject: &json.subject, 
+            reply_to: "",
+            plaintext: &json.plaintext 
+        };
+    
+        email_service.send(email).map_err(SubscriberError::EmailError)?
+    }
+    
     Ok(HttpResponse::Ok().finish())
 }
