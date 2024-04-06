@@ -76,15 +76,17 @@ impl TestApp {
             .await
     }
 
-    pub async fn publish_newsletter(&self, newsletter: String) -> Result<Response, reqwest::Error> {
-        let body = serde_json::json!({
-            "newsletter": newsletter,
+    pub async fn publish_newsletter(&self, html: String, text: String, subject: String) -> Result<Response, reqwest::Error> {
+        let newsletter = serde_json::json!({
+            "html": html,
+            "text": text,
+            "subject": subject 
         });
         let client = reqwest::Client::new();
         client
             .post(&format!("{}/newsletter", self.address()))
             .header("Content-Type", "application/json")
-            .body(body.to_string())
+            .body(newsletter.to_string())
             .send()
             .await
     }
