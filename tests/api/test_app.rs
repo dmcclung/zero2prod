@@ -52,6 +52,21 @@ impl TestApp {
         subscription_token.subscription_token
     }
 
+    pub async fn get_confirmed_subscriptions(&self) -> usize {
+        let confirmed_count = sqlx::query!(
+            r#"
+            SELECT COUNT(*) as count
+            FROM subscriptions
+            WHERE status = 'confirmed'
+            "#
+        )
+        .fetch_one(&self.pool)
+        .await
+        .expect("Failed to fetch confirmed subscription count");
+
+        confirmed_count.count.expect("Error getting count") as usize
+    }
+
     pub async fn create_subscription(
         &self,
         name: String,
@@ -76,11 +91,16 @@ impl TestApp {
             .await
     }
 
-    pub async fn publish_newsletter(&self, html: String, text: String, subject: String) -> Result<Response, reqwest::Error> {
+    pub async fn publish_newsletter(
+        &self,
+        html: String,
+        text: String,
+        subject: String,
+    ) -> Result<Response, reqwest::Error> {
         let newsletter = serde_json::json!({
             "html": html,
             "text": text,
-            "subject": subject 
+            "subject": subject
         });
         let client = reqwest::Client::new();
         client

@@ -8,13 +8,16 @@ use sqlx::{Pool, Postgres};
 use tracing::{info, instrument, Instrument};
 use uuid::Uuid;
 
-use crate::{domain::subscriber::SubscriberError, email::{EmailService, Email}};
+use crate::{
+    domain::subscriber::SubscriberError,
+    email::{Email, EmailService},
+};
 
 #[derive(Deserialize, Clone)]
 pub struct NewsletterJson {
     pub html: String,
-    pub plaintext: String,
-    pub subject: String
+    pub text: String,
+    pub subject: String,
 }
 
 #[instrument(
@@ -45,15 +48,17 @@ pub async fn publish_newsletter(
     for confirmed_email in confirmed_emails {
         let email = Email {
             to: &confirmed_email.email,
-            html: &json.html, 
-            from: "", 
-            subject: &json.subject, 
+            html: &json.html,
+            from: "",
+            subject: &json.subject,
             reply_to: "",
-            plaintext: &json.plaintext 
+            plaintext: &json.text,
         };
-    
-        email_service.send(email).map_err(SubscriberError::EmailError)?
+
+        email_service
+            .send(email)
+            .map_err(SubscriberError::EmailError)?
     }
-    
+
     Ok(HttpResponse::Ok().finish())
 }
