@@ -22,6 +22,18 @@ async fn publish_newsletter_returns_200() {
 }
 
 #[tokio::test]
+async fn publish_newsletter_returns_400_with_bad_html_text() {
+    let subject = Sentence(1..2).fake();
+
+    let test_app = spawn().await.unwrap();
+    let response = test_app
+        .publish_newsletter(None, None, Some(subject))
+        .await
+        .expect("Failed to post subscription");
+    assert_eq!(400, response.status().as_u16());
+}
+
+#[tokio::test]
 async fn newsletter_sent_to_confirmed_subscribers() {
     let text: String = Paragraph(1..2).fake();
     let html = String::from(format!("<p>{}</p>", text));
