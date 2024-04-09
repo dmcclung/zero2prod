@@ -15,7 +15,7 @@ async fn publish_newsletter_returns_200() {
     let test_app = spawn().await.unwrap();
 
     let response = test_app
-        .publish_newsletter(html, text, subject)
+        .publish_newsletter(Some(html), Some(text), Some(subject))
         .await
         .expect("Failed to post subscription");
     assert_eq!(200, response.status().as_u16());
@@ -30,7 +30,7 @@ async fn newsletter_sent_to_confirmed_subscribers() {
     let test_app = spawn().await.unwrap();
 
     let response = test_app
-        .publish_newsletter(html, text, subject)
+        .publish_newsletter(Some(html), Some(text), Some(subject))
         .await
         .expect("Failed to post subscription");
     assert_eq!(200, response.status().as_u16());
@@ -58,7 +58,7 @@ async fn newsletter_not_sent_to_unconfirmed_subscribers() {
     let subject = Sentence(1..2).fake();
 
     let response = test_app
-        .publish_newsletter(html, text, subject)
+        .publish_newsletter(Some(html), Some(text), Some(subject))
         .await
         .expect("Failed to post subscription");
     assert_eq!(200, response.status().as_u16());

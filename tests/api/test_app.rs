@@ -93,20 +93,31 @@ impl TestApp {
 
     pub async fn publish_newsletter(
         &self,
-        html: String,
-        text: String,
-        subject: String,
+        html: Option<String>,
+        text: Option<String>,
+        subject: Option<String>,
     ) -> Result<Response, reqwest::Error> {
-        let newsletter = serde_json::json!({
-            "html": html,
-            "text": text,
-            "subject": subject
-        });
+        let mut newsletter = serde_json::Map::new();
+        if let Some(html_value) = html {
+            newsletter.insert("html".to_string(), serde_json::Value::String(html_value));
+        }
+
+        if let Some(text_value) = text {
+            newsletter.insert("text".to_string(), serde_json::Value::String(text_value));
+        }
+
+        if let Some(subject_value) = subject {
+            newsletter.insert(
+                "subject".to_string(),
+                serde_json::Value::String(subject_value),
+            );
+        }
+
         let client = reqwest::Client::new();
         client
             .post(&format!("{}/newsletter", self.address()))
             .header("Content-Type", "application/json")
-            .body(newsletter.to_string())
+            .body(serde_json::json!(newsletter).to_string())
             .send()
             .await
     }
