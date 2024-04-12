@@ -1,8 +1,11 @@
 //! src/routes/newsletter.rs
 
-use std::sync::Arc;
+use std::{
+    fmt::{Display, Error, Formatter},
+    sync::Arc,
+};
 
-use actix_web::{web, HttpResponse};
+use actix_web::{web, HttpResponse, ResponseError};
 use serde::Deserialize;
 use sqlx::{Pool, Postgres};
 use tracing::{info, instrument, Instrument};
@@ -66,4 +69,32 @@ pub async fn publish_newsletter(
     }
 
     Ok(HttpResponse::Ok().finish())
+}
+
+#[derive(Debug)]
+pub enum PublishError {
+    DatabaseError(sqlx::Error),
+    EmailError(String),
+}
+
+impl Display for PublishError {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        match self {
+            PublishError::DatabaseError(e) => write!(f, "Database Error: {}", e),
+            PublishError::EmailError(e) => write!(f, "Error sending email: {}", e),
+        }
+    }
+}
+
+impl ResponseError for PublishError {
+    fn error_response(&self) -> HttpResponse {
+        match self {
+            PublishError::DatabaseError(ref error) => {
+                HttpResponse::InternalServerError().json(error.to_string())
+            }
+            PublishError::EmailError(ref message) => {
+                HttpResponse::InternalServerError().json(message)
+            }
+        }
+    }
 }
