@@ -20,6 +20,10 @@ pub struct NewsletterJson {
     pub subject: String,
 }
 
+struct ConfirmedSubscriber {
+    email: String,
+}
+
 #[instrument(
     skip(json, pool, email_service),
     fields(
@@ -31,7 +35,8 @@ pub async fn publish_newsletter(
     pool: web::Data<Pool<Postgres>>,
     email_service: web::Data<Arc<dyn EmailService + Send + Sync>>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    let confirmed_emails = sqlx::query!(
+    let confirmed_emails: Vec<ConfirmedSubscriber> = sqlx::query_as!(
+        ConfirmedSubscriber,
         r#"
         SELECT email
         FROM subscriptions
