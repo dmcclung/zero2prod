@@ -22,6 +22,21 @@ async fn publish_newsletter_returns_200() {
 }
 
 #[tokio::test]
+async fn missing_authorization_returns_401() {
+    let text: String = Paragraph(1..2).fake();
+    let html = String::from(format!("<p>{}</p>", text));
+    let subject = Sentence(1..2).fake();
+
+    let test_app = spawn().await.unwrap();
+
+    let response = test_app
+        .publish_newsletter(Some(html), Some(text), Some(subject))
+        .await
+        .expect("Failed to post subscription");
+    assert_eq!(401, response.status().as_u16());
+}
+
+#[tokio::test]
 async fn publish_newsletter_returns_400_with_bad_html_text() {
     let subject: String = Sentence(1..2).fake();
     let text: String = Paragraph(1..2).fake();
