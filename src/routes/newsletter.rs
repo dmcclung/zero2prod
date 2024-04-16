@@ -5,11 +5,12 @@ use std::{
     sync::Arc,
 };
 
-use actix_web::{web, HttpResponse, ResponseError};
+use actix_web::{http::header::HeaderMap, web, HttpResponse, ResponseError};
 use serde::Deserialize;
 use sqlx::{Pool, Postgres};
 use tracing::{info, instrument, Instrument};
 use uuid::Uuid;
+use secrecy::Secret;
 
 use crate::{
     domain::subscriber::SubscriberError,
@@ -27,6 +28,15 @@ struct ConfirmedSubscriber {
     email: String,
 }
 
+struct Credentials {
+    _username: String,
+    _password: Secret<String>
+}
+
+fn basic_authentication(_headers: &HeaderMap) -> Result<Credentials, String> {
+    todo!("Not implemented");
+}
+
 #[instrument(
     skip(json, pool, email_service),
     fields(
@@ -37,7 +47,9 @@ pub async fn publish_newsletter(
     json: web::Json<NewsletterJson>,
     pool: web::Data<Pool<Postgres>>,
     email_service: web::Data<Arc<dyn EmailService + Send + Sync>>,
+    request: actix_web::HttpRequest
 ) -> Result<HttpResponse, actix_web::Error> {
+    let _credentials = basic_authentication(request.headers());
     let confirmed_emails: Vec<ConfirmedSubscriber> = sqlx::query_as!(
         ConfirmedSubscriber,
         r#"
