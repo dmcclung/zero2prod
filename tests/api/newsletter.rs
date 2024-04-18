@@ -15,7 +15,13 @@ async fn publish_newsletter_returns_200() {
     let test_app = spawn().await.unwrap();
 
     let response = test_app
-        .publish_newsletter(Some(html), Some(text), Some(subject))
+        .publish_newsletter(
+            Some(html),
+            Some(text),
+            Some(subject),
+            "admin",
+            Some("password"),
+        )
         .await
         .expect("Failed to post subscription");
     assert_eq!(200, response.status().as_u16());
@@ -30,7 +36,7 @@ async fn missing_authorization_returns_401() {
     let test_app = spawn().await.unwrap();
 
     let response = test_app
-        .publish_newsletter(Some(html), Some(text), Some(subject))
+        .publish_newsletter(Some(html), Some(text), Some(subject), "admin", None)
         .await
         .expect("Failed to post subscription");
     assert_eq!(401, response.status().as_u16());
@@ -71,7 +77,13 @@ async fn publish_newsletter_returns_400_with_bad_html_text() {
 
     for test_case in test_cases {
         let response = test_app
-            .publish_newsletter(test_case.0, test_case.1, test_case.2)
+            .publish_newsletter(
+                test_case.0,
+                test_case.1,
+                test_case.2,
+                "admin",
+                Some("password"),
+            )
             .await
             .expect("Failed to post subscription");
         assert_eq!(
@@ -92,7 +104,13 @@ async fn newsletter_sent_to_confirmed_subscribers() {
     let test_app = spawn().await.unwrap();
 
     let response = test_app
-        .publish_newsletter(Some(html), Some(text), Some(subject))
+        .publish_newsletter(
+            Some(html),
+            Some(text),
+            Some(subject),
+            "admin",
+            Some("password"),
+        )
         .await
         .expect("Failed to post subscription");
     assert_eq!(200, response.status().as_u16());
@@ -120,7 +138,13 @@ async fn newsletter_not_sent_to_unconfirmed_subscribers() {
     let subject = Sentence(1..2).fake();
 
     let response = test_app
-        .publish_newsletter(Some(html), Some(text), Some(subject))
+        .publish_newsletter(
+            Some(html),
+            Some(text),
+            Some(subject),
+            "admin",
+            Some("password"),
+        )
         .await
         .expect("Failed to post subscription");
     assert_eq!(200, response.status().as_u16());

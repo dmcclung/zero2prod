@@ -7,27 +7,18 @@ use std::{
 
 use actix_web::{http::header::HeaderMap, web, HttpResponse, ResponseError};
 use base64::Engine;
-use secrecy::Secret;
-use serde::Deserialize;
+use secrecy::{ExposeSecret, Secret};
 use sqlx::{Pool, Postgres};
 use tracing::{info, instrument, Instrument};
 use uuid::Uuid;
 
 use crate::{
-    domain::subscriber::SubscriberError,
+    domain::{
+        newsletter::{ConfirmedSubscriber, Newsletter, NewsletterError},
+        subscriber::SubscriberError,
+    },
     email::{Email, EmailService},
 };
-
-#[derive(Deserialize, Clone)]
-pub struct NewsletterJson {
-    pub html: String,
-    pub text: String,
-    pub subject: String,
-}
-
-struct ConfirmedSubscriber {
-    email: String,
-}
 
 struct Credentials {
     username: String,
@@ -45,21 +36,21 @@ fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, String> {
         .strip_prefix("Basic ")
         .ok_or("Authorization scheme not Basic")?;
 
-    let decoded_bytes = 
-        base64::engine::general_purpose::STANDARD.decode(base64encoded)
+    let decoded_bytes = base64::engine::general_purpose::STANDARD
+        .decode(base64encoded)
         .map_err(|e| format!("Decoding authorization header: {}", e))?;
 
     let decoded_creds = String::from_utf8(decoded_bytes)
         .map_err(|e| format!("Stringifying decoded authorization header: {}", e))?;
 
-    let mut credentials = decoded_creds.splitn(2, ":");
-    
+    let mut credentials = decoded_creds.splitn(2, ':');
+
     let username = credentials.next().ok_or("Username missing")?.to_string();
     let password = credentials.next().ok_or("Password missing")?.to_string();
 
     Ok(Credentials {
         username,
-        password: Secret::new(password)
+        password: Secret::new(password),
     })
 }
 
@@ -70,12 +61,18 @@ fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, String> {
     )
 )]
 pub async fn publish_newsletter(
-    json: web::Json<NewsletterJson>,
+    json: web::Json<Newsletter>,
     pool: web::Data<Pool<Postgres>>,
     email_service: web::Data<Arc<dyn EmailService + Send + Sync>>,
     request: actix_web::HttpRequest,
 ) -> Result<HttpResponse, actix_web::Error> {
-    let _credentials = basic_authentication(request.headers());
+    let credentials =
+        basic_authentication(request.headers()).map_err(NewsletterError::PublishError)?;
+
+    if credentials.username != "admin" || credentials.password.expose_secret() != "password" {
+        return Ok(HttpResponse::Unauthorized().finish());
+    }
+
     let confirmed_emails: Vec<ConfirmedSubscriber> = sqlx::query_as!(
         ConfirmedSubscriber,
         r#"

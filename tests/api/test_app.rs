@@ -96,6 +96,8 @@ impl TestApp {
         html: Option<String>,
         text: Option<String>,
         subject: Option<String>,
+        username: &str,
+        password: Option<&str>,
     ) -> Result<Response, reqwest::Error> {
         let mut newsletter = serde_json::Map::new();
         if let Some(html_value) = html {
@@ -116,6 +118,7 @@ impl TestApp {
         let client = reqwest::Client::new();
         client
             .post(&format!("{}/newsletter", self.address()))
+            .basic_auth(username, password)
             .header("Content-Type", "application/json")
             .body(serde_json::json!(newsletter).to_string())
             .send()
