@@ -6,11 +6,12 @@ use std::{
 };
 
 use actix_web::{http::header::HeaderMap, web, HttpResponse, ResponseError};
+use base64::Engine;
+use secrecy::Secret;
 use serde::Deserialize;
 use sqlx::{Pool, Postgres};
 use tracing::{info, instrument, Instrument};
 use uuid::Uuid;
-use secrecy::Secret;
 
 use crate::{
     domain::subscriber::SubscriberError,
@@ -29,12 +30,37 @@ struct ConfirmedSubscriber {
 }
 
 struct Credentials {
-    _username: String,
-    _password: Secret<String>
+    username: String,
+    password: Secret<String>,
 }
 
-fn basic_authentication(_headers: &HeaderMap) -> Result<Credentials, String> {
-    todo!("Not implemented");
+fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, String> {
+    let header_value = headers
+        .get("Authorization")
+        .ok_or("Authorization header not found")?
+        .to_str()
+        .map_err(|e| format!("Authorization header to string error: {}", e))?;
+
+    let base64encoded = header_value
+        .strip_prefix("Basic ")
+        .ok_or("Authorization scheme not Basic")?;
+
+    let decoded_bytes = 
+        base64::engine::general_purpose::STANDARD.decode(base64encoded)
+        .map_err(|e| format!("Decoding authorization header: {}", e))?;
+
+    let decoded_creds = String::from_utf8(decoded_bytes)
+        .map_err(|e| format!("Stringifying decoded authorization header: {}", e))?;
+
+    let mut credentials = decoded_creds.splitn(2, ":");
+    
+    let username = credentials.next().ok_or("Username missing")?.to_string();
+    let password = credentials.next().ok_or("Password missing")?.to_string();
+
+    Ok(Credentials {
+        username,
+        password: Secret::new(password)
+    })
 }
 
 #[instrument(
@@ -47,7 +73,7 @@ pub async fn publish_newsletter(
     json: web::Json<NewsletterJson>,
     pool: web::Data<Pool<Postgres>>,
     email_service: web::Data<Arc<dyn EmailService + Send + Sync>>,
-    request: actix_web::HttpRequest
+    request: actix_web::HttpRequest,
 ) -> Result<HttpResponse, actix_web::Error> {
     let _credentials = basic_authentication(request.headers());
     let confirmed_emails: Vec<ConfirmedSubscriber> = sqlx::query_as!(
