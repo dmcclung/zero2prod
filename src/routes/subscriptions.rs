@@ -1,5 +1,5 @@
 use crate::{
-    domain::subscriber::{NewSubscriber, SubscriberEmail, SubscriberError, SubscriberName},
+    domain::subscriber::{Subscriber, SubscriberEmail, SubscriberError, SubscriberName},
     email::{Email, EmailService},
     templates::{
         ConfirmationEmailHtmlTemplate, ConfirmationEmailSubject, ConfirmationEmailTxtTemplate,
@@ -20,11 +20,15 @@ pub struct SubscriberFormData {
     pub name: String,
 }
 
-fn parse_subscriber(data: SubscriberFormData) -> Result<NewSubscriber, SubscriberError> {
+fn parse_subscriber(data: SubscriberFormData) -> Result<Subscriber, SubscriberError> {
     let email = SubscriberEmail::parse(data.email)?;
     let name = SubscriberName::parse(data.name)?;
 
-    let new_subscriber = NewSubscriber { email, name };
+    let new_subscriber = Subscriber {
+        email,
+        name,
+        status: "pending".to_string(),
+    };
     Ok(new_subscriber)
 }
 

@@ -14,8 +14,8 @@ use uuid::Uuid;
 
 use crate::{
     domain::{
-        newsletter::{ConfirmedSubscriber, Newsletter, NewsletterError},
-        subscriber::SubscriberError,
+        newsletter::{Newsletter, NewsletterError},
+        subscriber::{Subscriber, SubscriberError},
     },
     email::{Email, EmailService},
 };
@@ -73,10 +73,10 @@ pub async fn publish_newsletter(
         return Ok(HttpResponse::Unauthorized().finish());
     }
 
-    let confirmed_emails: Vec<ConfirmedSubscriber> = sqlx::query_as!(
-        ConfirmedSubscriber,
+    let confirmed_emails: Vec<Subscriber> = sqlx::query_as!(
+        Subscriber,
         r#"
-        SELECT email
+        SELECT email, name, status
         FROM subscriptions
         WHERE status = 'confirmed'
         "#
@@ -90,7 +90,7 @@ pub async fn publish_newsletter(
 
     for confirmed_email in confirmed_emails {
         let email = Email {
-            to: &confirmed_email.email,
+            to: &confirmed_email.email.to_string(),
             html: &json.html,
             from: "",
             subject: &json.subject,

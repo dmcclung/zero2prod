@@ -20,6 +20,12 @@ impl SubscriberEmail {
     }
 }
 
+impl From<String> for SubscriberEmail {
+    fn from(value: String) -> Self {
+        SubscriberEmail::parse(value).expect("Invalid subscriber email")
+    }
+}
+
 impl std::fmt::Display for SubscriberEmail {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.as_ref())
