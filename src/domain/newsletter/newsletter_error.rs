@@ -1,4 +1,4 @@
-//! src/domain/subscriber/subscriber_error.rs
+//! src/domain/subscriber/error.rs
 
 use actix_web::{error::ResponseError, HttpResponse};
 use std::fmt::{Display, Error, Formatter};

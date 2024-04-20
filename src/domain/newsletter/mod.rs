@@ -1,6 +1,6 @@
-mod error;
+mod newsletter_error;
 
-pub use error::*;
+pub use newsletter_error::*;
 
 use serde::Deserialize;
 
