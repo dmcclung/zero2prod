@@ -8,6 +8,7 @@ pub enum NewsletterError {
     PublishError(String),
     DatabaseError(sqlx::Error),
     EmailError(String),
+    AuthError(),
 }
 
 impl Display for NewsletterError {
@@ -16,6 +17,7 @@ impl Display for NewsletterError {
             NewsletterError::PublishError(e) => write!(f, "Publish Error: {}", e),
             NewsletterError::DatabaseError(e) => write!(f, "Database Error: {}", e),
             NewsletterError::EmailError(e) => write!(f, "Error sending email: {}", e),
+            NewsletterError::AuthError() => write!(f, "Unauthorized"),
         }
     }
 }
@@ -32,6 +34,7 @@ impl ResponseError for NewsletterError {
             NewsletterError::EmailError(ref message) => {
                 HttpResponse::InternalServerError().json(message)
             }
+            NewsletterError::AuthError() => HttpResponse::Unauthorized().finish(),
         }
     }
 }
