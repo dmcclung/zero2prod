@@ -55,9 +55,11 @@ fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, String> {
 }
 
 #[instrument(
-    skip(json, pool, email_service),
+    skip(json, pool, email_service, request),
     fields(
-        request_id = %Uuid::new_v4()
+        request_id = %Uuid::new_v4(),
+        username=tracing::field::Empty,
+        user_id=tracing::field::Empty
     )
 )]
 pub async fn publish_newsletter(
