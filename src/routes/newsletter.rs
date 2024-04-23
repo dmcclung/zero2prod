@@ -9,7 +9,7 @@ use actix_web::{http::header::HeaderMap, web, HttpResponse, ResponseError};
 use base64::Engine;
 use secrecy::{ExposeSecret, Secret};
 use sqlx::{Pool, Postgres};
-use tracing::{info, instrument, Instrument};
+use tracing::{error, info, instrument, Instrument};
 use uuid::Uuid;
 
 use crate::{
@@ -69,12 +69,33 @@ pub async fn publish_newsletter(
     email_service: web::Data<Arc<dyn EmailService + Send + Sync>>,
     request: actix_web::HttpRequest,
 ) -> Result<HttpResponse, actix_web::Error> {
-    let credentials =
-        basic_authentication(request.headers()).map_err(NewsletterError::PublishError)?;
+    let credentials = basic_authentication(request.headers()).map_err(|e| {
+        error!(e);
+        NewsletterError::AuthError()
+    })?;
 
-    if credentials.username != "admin" || credentials.password.expose_secret() != "password" {
-        return Ok(HttpResponse::Unauthorized().finish());
-    }
+    tracing::Span::current().record("username", &tracing::field::display(&credentials.username));
+
+    let user_row = sqlx::query!(
+        r#"
+        SELECT id FROM users WHERE username = $1 AND password = $2
+        "#,
+        credentials.username,
+        credentials.password.expose_secret()
+    )
+    .fetch_optional(pool.get_ref())
+    .instrument(tracing::info_span!("lookup user"))
+    .await
+    .map_err(|e| {
+        error!("{}", e);
+        NewsletterError::AuthError()
+    })?;
+
+    let user_id = user_row
+        .map(|r| r.id)
+        .ok_or_else(NewsletterError::AuthError)?;
+
+    tracing::Span::current().record("user_id", &tracing::field::display(&user_id));
 
     let confirmed_emails: Vec<Subscriber> = sqlx::query_as!(
         Subscriber,
@@ -87,7 +108,7 @@ pub async fn publish_newsletter(
     .fetch_all(pool.get_ref())
     .instrument(tracing::info_span!("get confirmed emails query"))
     .await
-    .map_err(SubscriberError::DatabaseError)?;
+    .map_err(NewsletterError::DatabaseError)?;
 
     info!("Confirmed email addresses: {}", confirmed_emails.len());
 
