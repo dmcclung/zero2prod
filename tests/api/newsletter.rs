@@ -14,6 +14,8 @@ async fn publish_newsletter_returns_200() {
 
     let test_app = spawn().await.unwrap();
 
+    test_app.add_test_user("admin".to_string(), "password".to_string()).await;
+
     let response = test_app
         .publish_newsletter(
             Some(html),
