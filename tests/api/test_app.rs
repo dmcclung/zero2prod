@@ -23,6 +23,20 @@ impl TestApp {
         &self.address
     }
 
+    pub async fn add_test_user(&self, username: String, password: String) {
+        sqlx::query!(
+            "INSERT INTO users (id, username, password)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (username) DO NOTHING",
+            Uuid::new_v4(),
+            username,
+            password,
+        )
+        .execute(&self.pool)
+        .await
+        .expect("Failed to create test user.");
+    }
+
     pub async fn get_subscription(
         &self,
         subscriber_name: &String,
