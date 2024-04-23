@@ -55,6 +55,7 @@ fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, String> {
 }
 
 #[instrument(
+    name = "Publish a newsletter issue",
     skip(json, pool, email_service, request),
     fields(
         request_id = %Uuid::new_v4(),
