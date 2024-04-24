@@ -10,6 +10,8 @@ use uuid::Uuid;
 use zero2prod::app::Application;
 use zero2prod::config::Config;
 
+use sha3::Digest;
+
 use crate::mocks::MockEmailService;
 
 pub struct TestApp {
@@ -23,14 +25,21 @@ impl TestApp {
         &self.address
     }
 
+    fn hash_password(password: String) -> String {
+        let password_hash = sha3::Sha3_256::digest(
+            password.as_bytes());
+    
+        format!("{:x}", password_hash)
+    }
+
     pub async fn add_test_user(&self, username: String, password: String) {
         sqlx::query!(
-            "INSERT INTO users (id, username, password)
+            "INSERT INTO users (id, username, password_hash)
             VALUES ($1, $2, $3)
             ON CONFLICT (username) DO NOTHING",
             Uuid::new_v4(),
             username,
-            password,
+            TestApp::hash_password(password),
         )
         .execute(&self.pool)
         .await

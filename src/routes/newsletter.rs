@@ -7,10 +7,11 @@ use std::{
 
 use actix_web::{http::header::HeaderMap, web, HttpResponse, ResponseError};
 use base64::Engine;
-use secrecy::{ExposeSecret, Secret};
 use sqlx::{Pool, Postgres};
 use tracing::{error, info, instrument, Instrument};
 use uuid::Uuid;
+
+use sha3::Digest;
 
 use crate::{
     domain::{
@@ -22,7 +23,7 @@ use crate::{
 
 struct Credentials {
     username: String,
-    password: Secret<String>,
+    password_hash: String,
 }
 
 fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, String> {
@@ -48,9 +49,14 @@ fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, String> {
     let username = credentials.next().ok_or("Username missing")?.to_string();
     let password = credentials.next().ok_or("Password missing")?.to_string();
 
+    let password_hash = sha3::Sha3_256::digest(
+        password.as_bytes());
+
+    let password_hash = format!("{:x}", password_hash);
+
     Ok(Credentials {
         username,
-        password: Secret::new(password),
+        password_hash,
     })
 }
 
@@ -78,10 +84,10 @@ pub async fn publish_newsletter(
 
     let user_row = sqlx::query!(
         r#"
-        SELECT id FROM users WHERE username = $1 AND password = $2
+        SELECT id FROM users WHERE username = $1 AND password_hash = $2
         "#,
         credentials.username,
-        credentials.password.expose_secret()
+        credentials.password_hash
     )
     .fetch_optional(pool.get_ref())
     .instrument(tracing::info_span!("lookup user"))
