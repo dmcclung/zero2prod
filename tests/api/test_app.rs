@@ -36,7 +36,7 @@ impl TestApp {
         sqlx::query!(
             "INSERT INTO users (id, username, password_hash)
             VALUES ($1, $2, $3)
-            ON CONFLICT (username) DO NOTHING",
+            ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash;",
             Uuid::new_v4(),
             username,
             TestApp::hash_password(password),
