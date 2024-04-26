@@ -34,12 +34,13 @@ impl TestApp {
 
     pub async fn add_test_user(&self, username: String, password: String) {
         sqlx::query!(
-            "INSERT INTO users (id, username, password_hash)
-            VALUES ($1, $2, $3)
+            "INSERT INTO users (id, username, password_hash, salt)
+            VALUES ($1, $2, $3, $4)
             ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash;",
             Uuid::new_v4(),
             username,
             TestApp::hash_password(password),
+            "salt"
         )
         .execute(&self.pool)
         .await
