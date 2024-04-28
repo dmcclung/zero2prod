@@ -36,13 +36,12 @@ impl TestApp {
             .to_string();
 
         sqlx::query!(
-            "INSERT INTO users (id, username, password_hash, salt)
-            VALUES ($1, $2, $3, $4)
-            ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash, salt = EXCLUDED.salt;",
+            "INSERT INTO users (id, username, password_hash)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash",
             Uuid::new_v4(),
             username,
-            password_hash,
-            salt.to_string()
+            password_hash
         )
         .execute(&self.pool)
         .await
