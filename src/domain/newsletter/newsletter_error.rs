@@ -9,6 +9,7 @@ pub enum NewsletterError {
     DatabaseError(sqlx::Error),
     EmailError(String),
     AuthError(),
+    HasherError(argon2::Error),
 }
 
 impl Display for NewsletterError {
@@ -18,6 +19,7 @@ impl Display for NewsletterError {
             NewsletterError::DatabaseError(e) => write!(f, "Database Error: {}", e),
             NewsletterError::EmailError(e) => write!(f, "Error sending email: {}", e),
             NewsletterError::AuthError() => write!(f, "Unauthorized"),
+            NewsletterError::HasherError(e) => write!(f, "Error hashing password: {}", e),
         }
     }
 }
@@ -35,6 +37,7 @@ impl ResponseError for NewsletterError {
                 HttpResponse::InternalServerError().json(message)
             }
             NewsletterError::AuthError() => HttpResponse::Unauthorized().finish(),
+            NewsletterError::HasherError(ref _error) => HttpResponse::Unauthorized().finish(),
         }
     }
 }

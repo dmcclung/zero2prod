@@ -2,6 +2,10 @@
 
 use std::sync::Arc;
 
+use argon2::{
+    password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
+    Argon2,
+};
 use reqwest::Response;
 use serde_json;
 use sqlx::postgres::PgPoolOptions;
@@ -9,8 +13,6 @@ use sqlx::{Pool, Postgres};
 use uuid::Uuid;
 use zero2prod::app::Application;
 use zero2prod::config::Config;
-
-use sha3::Digest;
 
 use crate::mocks::MockEmailService;
 
@@ -25,22 +27,22 @@ impl TestApp {
         &self.address
     }
 
-    fn hash_password(password: String) -> String {
-        let password_hash = sha3::Sha3_256::digest(
-            password.as_bytes());
-    
-        format!("{:x}", password_hash)
-    }
-
     pub async fn add_test_user(&self, username: String, password: String) {
+        let salt = SaltString::generate(&mut OsRng);
+        let argon2 = Argon2::default();
+        let password_hash = argon2
+            .hash_password(password.as_bytes(), &salt)
+            .expect("Failed to hash password")
+            .to_string();
+
         sqlx::query!(
             "INSERT INTO users (id, username, password_hash, salt)
             VALUES ($1, $2, $3, $4)
-            ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash;",
+            ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash, salt = EXCLUDED.salt;",
             Uuid::new_v4(),
             username,
-            TestApp::hash_password(password),
-            "salt"
+            password_hash,
+            salt.to_string()
         )
         .execute(&self.pool)
         .await

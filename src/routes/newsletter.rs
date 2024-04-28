@@ -6,12 +6,11 @@ use std::{
 };
 
 use actix_web::{http::header::HeaderMap, web, HttpResponse, ResponseError};
+use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use base64::Engine;
 use sqlx::{Pool, Postgres};
 use tracing::{error, info, instrument, Instrument};
 use uuid::Uuid;
-
-use sha3::Digest;
 
 use crate::{
     domain::{
@@ -23,7 +22,7 @@ use crate::{
 
 struct Credentials {
     username: String,
-    password_hash: String,
+    password: String,
 }
 
 fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, String> {
@@ -49,15 +48,7 @@ fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, String> {
     let username = credentials.next().ok_or("Username missing")?.to_string();
     let password = credentials.next().ok_or("Password missing")?.to_string();
 
-    let password_hash = sha3::Sha3_256::digest(
-        password.as_bytes());
-
-    let password_hash = format!("{:x}", password_hash);
-
-    Ok(Credentials {
-        username,
-        password_hash,
-    })
+    Ok(Credentials { username, password })
 }
 
 #[instrument(
@@ -82,12 +73,11 @@ pub async fn publish_newsletter(
 
     tracing::Span::current().record("username", &tracing::field::display(&credentials.username));
 
-    let user_row = sqlx::query!(
+    let user = sqlx::query!(
         r#"
-        SELECT id FROM users WHERE username = $1 AND password_hash = $2
+        SELECT id, password_hash, salt FROM users WHERE username = $1
         "#,
         credentials.username,
-        credentials.password_hash
     )
     .fetch_optional(pool.get_ref())
     .instrument(tracing::info_span!("lookup user"))
@@ -95,13 +85,19 @@ pub async fn publish_newsletter(
     .map_err(|e| {
         error!("{}", e);
         NewsletterError::AuthError()
-    })?;
+    })?
+    .ok_or_else(NewsletterError::AuthError)?;
 
-    let user_id = user_row
-        .map(|r| r.id)
-        .ok_or_else(NewsletterError::AuthError)?;
+    let argon2 = Argon2::default();
 
-    tracing::Span::current().record("user_id", &tracing::field::display(&user_id));
+    let parsed_hash =
+        PasswordHash::new(&user.password_hash).map_err(|_| NewsletterError::AuthError())?;
+
+    argon2
+        .verify_password(credentials.password.as_bytes(), &parsed_hash)
+        .map_err(|_| NewsletterError::AuthError())?;
+
+    tracing::Span::current().record("user_id", &tracing::field::display(&user.id));
 
     let confirmed_emails: Vec<Subscriber> = sqlx::query_as!(
         Subscriber,

@@ -14,7 +14,9 @@ async fn publish_newsletter_returns_200() {
 
     let test_app = spawn().await.unwrap();
 
-    test_app.add_test_user("admin".to_string(), "password".to_string()).await;
+    test_app
+        .add_test_user("admin".to_string(), "password".to_string())
+        .await;
 
     let response = test_app
         .publish_newsletter(
@@ -39,6 +41,24 @@ async fn missing_authorization_returns_401() {
 
     let response = test_app
         .publish_newsletter(Some(html), Some(text), Some(subject), "admin", None)
+        .await
+        .expect("Failed to post subscription");
+    assert_eq!(401, response.status().as_u16());
+}
+
+#[tokio::test]
+async fn bad_password_returns_401() {
+    let text: String = Paragraph(1..2).fake();
+    let html = String::from(format!("<p>{}</p>", text));
+    let subject = Sentence(1..2).fake();
+
+    let test_app = spawn().await.unwrap();
+    test_app
+        .add_test_user("admin".to_string(), "password".to_string())
+        .await;
+
+    let response = test_app
+        .publish_newsletter(Some(html), Some(text), Some(subject), "admin", Some("bad_pass"))
         .await
         .expect("Failed to post subscription");
     assert_eq!(401, response.status().as_u16());
@@ -104,7 +124,9 @@ async fn newsletter_sent_to_confirmed_subscribers() {
     let subject = Sentence(1..2).fake();
 
     let test_app = spawn().await.unwrap();
-    test_app.add_test_user("admin".to_string(), "password".to_string()).await;
+    test_app
+        .add_test_user("admin".to_string(), "password".to_string())
+        .await;
 
     let response = test_app
         .publish_newsletter(
@@ -125,7 +147,9 @@ async fn newsletter_sent_to_confirmed_subscribers() {
 #[tokio::test]
 async fn newsletter_not_sent_to_unconfirmed_subscribers() {
     let test_app = spawn().await.unwrap();
-    test_app.add_test_user("admin".to_string(), "password".to_string()).await;
+    test_app
+        .add_test_user("admin".to_string(), "password".to_string())
+        .await;
 
     let name: String = FirstName().fake();
     let email: String = SafeEmail().fake();
