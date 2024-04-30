@@ -58,7 +58,13 @@ async fn bad_password_returns_401() {
         .await;
 
     let response = test_app
-        .publish_newsletter(Some(html), Some(text), Some(subject), "admin", Some("bad_pass"))
+        .publish_newsletter(
+            Some(html),
+            Some(text),
+            Some(subject),
+            "admin",
+            Some("bad_pass"),
+        )
         .await
         .expect("Failed to post subscription");
     assert_eq!(401, response.status().as_u16());
