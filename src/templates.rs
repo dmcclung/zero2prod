@@ -15,3 +15,7 @@ pub struct ConfirmationEmailTxtTemplate<'a> {
 #[derive(Template)]
 #[template(path = "confirmation/subject.txt")]
 pub struct ConfirmationEmailSubject {}
+
+#[derive(Template)]
+#[template(path = "home.html")]
+pub struct HomeTemplate {}

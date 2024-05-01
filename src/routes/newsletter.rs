@@ -1,11 +1,8 @@
 //! src/routes/newsletter.rs
 
-use std::{
-    fmt::{Display, Error, Formatter},
-    sync::Arc,
-};
+use std::sync::Arc;
 
-use actix_web::{http::header::HeaderMap, web, HttpResponse, ResponseError};
+use actix_web::{http::header::HeaderMap, web, HttpResponse};
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use base64::Engine;
 use sqlx::{Pool, Postgres};
@@ -102,7 +99,7 @@ pub async fn publish_newsletter(
         Ok::<(), NewsletterError>(())
     });
 
-    let _ok = handle.await.map_err(|_| NewsletterError::AuthError())??;
+    handle.await.map_err(|_| NewsletterError::AuthError())??;
 
     tracing::Span::current().record("user_id", &tracing::field::display(&user.id));
 
@@ -137,32 +134,4 @@ pub async fn publish_newsletter(
     }
 
     Ok(HttpResponse::Ok().finish())
-}
-
-#[derive(Debug)]
-pub enum PublishError {
-    DatabaseError(sqlx::Error),
-    EmailError(String),
-}
-
-impl Display for PublishError {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
-        match self {
-            PublishError::DatabaseError(e) => write!(f, "Database Error: {}", e),
-            PublishError::EmailError(e) => write!(f, "Error sending email: {}", e),
-        }
-    }
-}
-
-impl ResponseError for PublishError {
-    fn error_response(&self) -> HttpResponse {
-        match self {
-            PublishError::DatabaseError(ref error) => {
-                HttpResponse::InternalServerError().json(error.to_string())
-            }
-            PublishError::EmailError(ref message) => {
-                HttpResponse::InternalServerError().json(message)
-            }
-        }
-    }
 }
