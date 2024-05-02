@@ -9,6 +9,7 @@ use actix_web::{http::header::HeaderMap, web, HttpResponse, ResponseError};
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use base64::Engine;
 use sqlx::{Pool, Postgres};
+use tokio::task;
 use tracing::{error, info, instrument, Instrument};
 use uuid::Uuid;
 
@@ -88,14 +89,20 @@ pub async fn publish_newsletter(
     })?
     .ok_or_else(NewsletterError::AuthError)?;
 
-    let argon2 = Argon2::default();
+    let handle = task::spawn_blocking(move || {
+        let argon2 = Argon2::default();
 
-    let parsed_hash =
-        PasswordHash::new(&user.password_hash).map_err(|_| NewsletterError::AuthError())?;
+        let parsed_hash =
+            PasswordHash::new(&user.password_hash).map_err(|_| NewsletterError::AuthError())?;
 
-    argon2
-        .verify_password(credentials.password.as_bytes(), &parsed_hash)
-        .map_err(|_| NewsletterError::AuthError())?;
+        argon2
+            .verify_password(credentials.password.as_bytes(), &parsed_hash)
+            .map_err(|_| NewsletterError::AuthError())?;
+
+        Ok::<(), NewsletterError>(())
+    });
+
+    let _ok = handle.await.map_err(|_| NewsletterError::AuthError())??;
 
     tracing::Span::current().record("user_id", &tracing::field::display(&user.id));
 
