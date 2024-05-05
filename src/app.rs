@@ -5,7 +5,7 @@ use std::{net::TcpListener, sync::Arc};
 use actix_web::{dev::Server, middleware::Logger, web, App, HttpServer};
 use sqlx::{Pool, Postgres};
 
-use crate::routes::{confirm, health_check, home, publish_newsletter, subscribe};
+use crate::routes::{confirm, health_check, home, login, publish_newsletter, subscribe};
 
 pub struct Application {
     port: u16,
@@ -52,6 +52,7 @@ impl Application {
                 .route("/subscriptions", web::post().to(subscribe))
                 .route("/confirm", web::get().to(confirm))
                 .route("/newsletter", web::post().to(publish_newsletter))
+                .route("/login", web::get().to(login))
                 .route("/", web::get().to(home))
                 .app_data(pool)
                 .app_data(email_service)
