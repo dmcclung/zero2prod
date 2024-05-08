@@ -19,3 +19,7 @@ pub struct ConfirmationEmailSubject {}
 #[derive(Template)]
 #[template(path = "home.html")]
 pub struct HomeTemplate {}
+
+#[derive(Template)]
+#[template(path = "login.html")]
+pub struct LoginTemplate {}
