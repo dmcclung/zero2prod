@@ -5,6 +5,7 @@ use std::sync::Arc;
 use actix_web::{http::header::HeaderMap, web, HttpResponse};
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use base64::Engine;
+use secrecy::{ExposeSecret, Secret};
 use sqlx::{Pool, Postgres};
 use tokio::task;
 use tracing::{error, info, instrument, Instrument};
@@ -20,7 +21,7 @@ use crate::{
 
 struct Credentials {
     username: String,
-    password: String,
+    password: Secret<String>
 }
 
 fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, String> {
@@ -44,7 +45,7 @@ fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, String> {
     let mut credentials = decoded_creds.splitn(2, ':');
 
     let username = credentials.next().ok_or("Username missing")?.to_string();
-    let password = credentials.next().ok_or("Password missing")?.to_string();
+    let password = Secret::from(credentials.next().ok_or("Password missing")?.to_string());
 
     Ok(Credentials { username, password })
 }
@@ -93,7 +94,7 @@ pub async fn publish_newsletter(
             PasswordHash::new(&user.password_hash).map_err(|_| NewsletterError::AuthError())?;
 
         argon2
-            .verify_password(credentials.password.as_bytes(), &parsed_hash)
+            .verify_password(credentials.password.expose_secret().as_bytes(), &parsed_hash)
             .map_err(|_| NewsletterError::AuthError())?;
 
         Ok::<(), NewsletterError>(())
