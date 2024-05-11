@@ -1,54 +1,18 @@
 //! src/routes/newsletter.rs
 
-use std::sync::Arc;
-
-use actix_web::{http::header::HeaderMap, web, HttpResponse};
-use argon2::{Argon2, PasswordHash, PasswordVerifier};
-use base64::Engine;
-use secrecy::{ExposeSecret, Secret};
-use sqlx::{Pool, Postgres};
-use tokio::task;
-use tracing::{error, info, instrument, Instrument};
-use uuid::Uuid;
-
 use crate::{
+    auth::validate_credentials,
     domain::{
         newsletter::{Newsletter, NewsletterError},
         subscriber::{Subscriber, SubscriberError},
     },
     email::{Email, EmailService},
 };
-
-struct Credentials {
-    username: String,
-    password: Secret<String>
-}
-
-fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, String> {
-    let header_value = headers
-        .get("Authorization")
-        .ok_or("Authorization header not found")?
-        .to_str()
-        .map_err(|e| format!("Authorization header to string error: {}", e))?;
-
-    let base64encoded = header_value
-        .strip_prefix("Basic ")
-        .ok_or("Authorization scheme not Basic")?;
-
-    let decoded_bytes = base64::engine::general_purpose::STANDARD
-        .decode(base64encoded)
-        .map_err(|e| format!("Decoding authorization header: {}", e))?;
-
-    let decoded_creds = String::from_utf8(decoded_bytes)
-        .map_err(|e| format!("Stringifying decoded authorization header: {}", e))?;
-
-    let mut credentials = decoded_creds.splitn(2, ':');
-
-    let username = credentials.next().ok_or("Username missing")?.to_string();
-    let password = Secret::from(credentials.next().ok_or("Password missing")?.to_string());
-
-    Ok(Credentials { username, password })
-}
+use actix_web::{web, HttpResponse};
+use sqlx::{Pool, Postgres};
+use std::sync::Arc;
+use tracing::{info, instrument, Instrument};
+use uuid::Uuid;
 
 #[instrument(
     name = "Publish a newsletter issue",
@@ -65,44 +29,9 @@ pub async fn publish_newsletter(
     email_service: web::Data<Arc<dyn EmailService + Send + Sync>>,
     request: actix_web::HttpRequest,
 ) -> Result<HttpResponse, actix_web::Error> {
-    let credentials = basic_authentication(request.headers()).map_err(|e| {
-        error!(e);
-        NewsletterError::AuthError()
-    })?;
+    let user_id = validate_credentials(request, pool.get_ref()).await?;
 
-    tracing::Span::current().record("username", &tracing::field::display(&credentials.username));
-
-    let user = sqlx::query!(
-        r#"
-        SELECT id, password_hash FROM users WHERE username = $1
-        "#,
-        credentials.username,
-    )
-    .fetch_optional(pool.get_ref())
-    .instrument(tracing::info_span!("lookup user"))
-    .await
-    .map_err(|e| {
-        error!("{}", e);
-        NewsletterError::AuthError()
-    })?
-    .ok_or_else(NewsletterError::AuthError)?;
-
-    let handle = task::spawn_blocking(move || {
-        let argon2 = Argon2::default();
-
-        let parsed_hash =
-            PasswordHash::new(&user.password_hash).map_err(|_| NewsletterError::AuthError())?;
-
-        argon2
-            .verify_password(credentials.password.expose_secret().as_bytes(), &parsed_hash)
-            .map_err(|_| NewsletterError::AuthError())?;
-
-        Ok::<(), NewsletterError>(())
-    });
-
-    handle.await.map_err(|_| NewsletterError::AuthError())??;
-
-    tracing::Span::current().record("user_id", &tracing::field::display(&user.id));
+    tracing::Span::current().record("user_id", &tracing::field::display(user_id));
 
     let confirmed_emails: Vec<Subscriber> = sqlx::query_as!(
         Subscriber,
