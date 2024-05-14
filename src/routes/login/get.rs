@@ -3,6 +3,7 @@ use actix_web::http::header::ContentType;
 use actix_web::HttpResponse;
 use askama::Template;
 
+#[tracing::instrument()]
 pub async fn login_form() -> HttpResponse {
     let login_template = LoginTemplate {};
     let login_rendered = login_template.render().unwrap();
