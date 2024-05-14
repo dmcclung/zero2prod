@@ -1,5 +1,6 @@
 use actix_web::{http::header, web, HttpResponse};
 use secrecy::Secret;
+use sqlx::{Pool, Postgres};
 
 #[derive(serde::Deserialize)]
 pub struct LoginFormData {
@@ -7,7 +8,14 @@ pub struct LoginFormData {
     _password: Secret<String>,
 }
 
-pub async fn login(_form: web::Form<LoginFormData>) -> HttpResponse {
+#[tracing::instrument(
+    skip(form, pool),
+    fields(username=tracing::field::Empty, user_id=tracing::field::Empty)
+    )]
+pub async fn login(
+    form: web::Form<LoginFormData>,
+    pool: web::Data<Pool<Postgres>>,
+) -> HttpResponse {
     HttpResponse::SeeOther()
         .insert_header((header::LOCATION, "/"))
         .finish()
