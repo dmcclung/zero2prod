@@ -1,7 +1,7 @@
 //! src/routes/newsletter.rs
 
 use crate::{
-    auth::validate_credentials,
+    auth::validate_request,
     domain::{
         newsletter::{Newsletter, NewsletterError},
         subscriber::{Subscriber, SubscriberError},
@@ -29,7 +29,7 @@ pub async fn publish_newsletter(
     email_service: web::Data<Arc<dyn EmailService + Send + Sync>>,
     request: actix_web::HttpRequest,
 ) -> Result<HttpResponse, actix_web::Error> {
-    let user_id = validate_credentials(request, pool.get_ref()).await?;
+    let user_id = validate_request(request, pool.get_ref()).await?;
 
     tracing::Span::current().record("user_id", &tracing::field::display(user_id));
 

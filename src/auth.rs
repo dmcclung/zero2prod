@@ -38,8 +38,8 @@ impl Display for AuthError {
 }
 
 pub struct Credentials {
-    username: String,
-    password: Secret<String>,
+    pub username: String,
+    pub password: Secret<String>,
 }
 
 fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, String> {
@@ -68,7 +68,7 @@ fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, String> {
     Ok(Credentials { username, password })
 }
 
-pub async fn validate_credentials(
+pub async fn validate_request(
     request: actix_web::HttpRequest,
     pool: &Pool<Postgres>,
 ) -> Result<Uuid, AuthError> {
@@ -77,6 +77,13 @@ pub async fn validate_credentials(
         AuthError::InvalidCredentials
     })?;
 
+    validate_credentials(credentials, pool).await
+}
+
+pub async fn validate_credentials(
+    credentials: Credentials,
+    pool: &Pool<Postgres>,
+) -> Result<Uuid, AuthError> {
     tracing::Span::current().record("username", &tracing::field::display(&credentials.username));
 
     let user = sqlx::query!(
