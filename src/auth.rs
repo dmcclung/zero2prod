@@ -2,7 +2,7 @@
 
 use std::fmt::{Display, Error, Formatter};
 
-use actix_web::{http::header::HeaderMap, HttpResponse, ResponseError};
+use actix_web::{http::header::{HeaderMap, LOCATION}, HttpResponse, ResponseError};
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use base64::Engine;
 use secrecy::{ExposeSecret, Secret};
@@ -20,7 +20,12 @@ pub enum AuthError {
 impl ResponseError for AuthError {
     fn error_response(&self) -> HttpResponse {
         match self {
-            AuthError::InvalidCredentials => HttpResponse::Unauthorized().finish(),
+            AuthError::InvalidCredentials => {
+                let encoded_error = urlencoding::Encoded::new("Invalid credentials");
+                HttpResponse::Unauthorized()
+                    .insert_header((LOCATION, format!("/login?error={}", encoded_error)))
+                    .finish()
+            },
             AuthError::UnexpectedError(ref message) => {
                 HttpResponse::InternalServerError().json(message)
             }
