@@ -3,6 +3,11 @@ use actix_web::http::header::ContentType;
 use actix_web::HttpResponse;
 use askama::Template;
 
+#[derive(serde::Deserialize)]
+pub struct QueryParams {
+    _error: Option<String>,
+}
+
 #[tracing::instrument()]
 pub async fn login_form() -> HttpResponse {
     let login_template = LoginTemplate {};
