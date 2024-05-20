@@ -2,7 +2,10 @@
 
 use std::fmt::{Display, Error, Formatter};
 
-use actix_web::{http::header::{HeaderMap, LOCATION}, HttpResponse, ResponseError};
+use actix_web::{
+    http::header::{HeaderMap, LOCATION},
+    HttpResponse, ResponseError,
+};
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use base64::Engine;
 use secrecy::{ExposeSecret, Secret};
@@ -25,7 +28,7 @@ impl ResponseError for AuthError {
                 HttpResponse::Unauthorized()
                     .insert_header((LOCATION, format!("/login?error={}", encoded_error)))
                     .finish()
-            },
+            }
             AuthError::UnexpectedError(ref message) => {
                 HttpResponse::InternalServerError().json(message)
             }
